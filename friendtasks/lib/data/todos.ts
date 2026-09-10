@@ -1,10 +1,17 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { verifySession } from "@/lib/data/dal";
-import { addMinutesClamped, endOfWeekISO, getWeekDays, nowTimeISO, todayISO } from "@/lib/utils/date";
+import {
+  addMinutesClamped,
+  endOfWeekISO,
+  getWeekDays,
+  nextRecurrenceDate,
+  nowTimeISO,
+  todayISO,
+} from "@/lib/utils/date";
 import type { Assignee, Subtask, Tag, Todo, TodoFilters, TodoWithRelations } from "@/lib/types/todo";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/types/database";
+import type { Database, Recurrence } from "@/lib/types/database";
 
 const TODO_SELECT = "*, subtasks(*), todo_tags(tags(*))";
 
@@ -75,22 +82,85 @@ async function withGroupNames(
   }));
 }
 
+// Rolls a recurring todo's due date forward (respecting its recurrence
+// interval) until it lands within [rangeStart, rangeEnd], or returns null if
+// it never falls in range (e.g. the anchor date is still in the future).
+// Capped iteration count: cheap and plenty for any date range this app
+// actually queries (a single week, or "today").
+function projectDueDate(
+  dueDate: string,
+  recurrence: Recurrence,
+  rangeStart: string,
+  rangeEnd: string
+): string | null {
+  if (dueDate > rangeEnd) return null;
+  let candidate = dueDate;
+  let iterations = 0;
+  while (candidate < rangeStart && iterations < 500) {
+    candidate = nextRecurrenceDate(candidate, recurrence);
+    iterations++;
+  }
+  return candidate >= rangeStart && candidate <= rangeEnd ? candidate : null;
+}
+
+// Recurring todos whose real due_date already fell before `rangeStart` still
+// belong in [rangeStart, rangeEnd] at their next projected occurrence — a
+// weekly todo should show up on every future week, not just once it's been
+// completed. This is purely a display projection: it returns the same todo
+// with `due_date` swapped to the projected date, no new row is created.
+async function getProjectedRecurringTodos(
+  supabase: SupabaseClient<Database>,
+  rangeStart: string,
+  rangeEnd: string,
+  filters: TodoFilters = {}
+): Promise<TodoWithRelations[]> {
+  // Completing a recurring todo rolls it forward and reopens it (see
+  // toggleTodoStatus), so it's always "open" in practice — matches what a
+  // "done" status filter would otherwise need to exclude here.
+  let query = supabase
+    .from("todos")
+    .select(TODO_SELECT)
+    .not("recurrence", "is", null)
+    .eq("status", "open")
+    .lt("due_date", rangeStart);
+
+  if (filters.priority && filters.priority !== "all") query = query.eq("priority", filters.priority);
+  if (filters.status && filters.status !== "all" && filters.status !== "open") {
+    return [];
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const projected: TodoWithRelations[] = [];
+  for (const todo of toTodoRows(data).map(mapTodo)) {
+    if (!todo.due_date || !todo.recurrence) continue;
+    const projectedDate = projectDueDate(todo.due_date, todo.recurrence, rangeStart, rangeEnd);
+    if (projectedDate) projected.push({ ...todo, due_date: projectedDate });
+  }
+  return projected;
+}
+
 // Like getAllTodos below: not filtered to the caller's own todos, so a
 // group todo due today shows up here too (RLS still scopes this to todos
 // the caller can actually see). group_name lets the UI tell them apart.
 export async function getTodayTodos(filters: TodoFilters = {}): Promise<TodoWithRelations[]> {
   await verifySession();
   const supabase = await createClient();
+  const today = todayISO();
 
-  let query = supabase.from("todos").select(TODO_SELECT).eq("due_date", todayISO());
+  let query = supabase.from("todos").select(TODO_SELECT).eq("due_date", today);
 
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters.priority && filters.priority !== "all") query = query.eq("priority", filters.priority);
 
-  const { data, error } = await query.order("priority", { ascending: false });
+  const [{ data, error }, projected] = await Promise.all([
+    query.order("priority", { ascending: false }),
+    getProjectedRecurringTodos(supabase, today, today, filters),
+  ]);
 
   if (error) throw new Error(error.message);
-  const todos = await withGroupNames(supabase, toTodoRows(data).map(mapTodo));
+  const todos = await withGroupNames(supabase, [...toTodoRows(data).map(mapTodo), ...projected]);
   return applyPostFilters(todos, filters);
 }
 
@@ -100,20 +170,25 @@ export async function getTodayTodos(filters: TodoFilters = {}): Promise<TodoWith
 export async function getUpcomingTodos(filters: TodoFilters = {}): Promise<TodoWithRelations[]> {
   await verifySession();
   const supabase = await createClient();
+  const today = todayISO();
+  const weekEnd = endOfWeekISO();
 
   let query = supabase
     .from("todos")
     .select(TODO_SELECT)
-    .gte("due_date", todayISO())
-    .lte("due_date", endOfWeekISO());
+    .gte("due_date", today)
+    .lte("due_date", weekEnd);
 
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters.priority && filters.priority !== "all") query = query.eq("priority", filters.priority);
 
-  const { data, error } = await query.order("due_date", { ascending: true });
+  const [{ data, error }, projected] = await Promise.all([
+    query.order("due_date", { ascending: true }),
+    getProjectedRecurringTodos(supabase, today, weekEnd, filters),
+  ]);
 
   if (error) throw new Error(error.message);
-  const todos = await withGroupNames(supabase, toTodoRows(data).map(mapTodo));
+  const todos = await withGroupNames(supabase, [...toTodoRows(data).map(mapTodo), ...projected]);
   return applyPostFilters(todos, filters);
 }
 
@@ -174,15 +249,18 @@ export async function getWeekTodos(mondayISO: string): Promise<TodoWithRelations
   const supabase = await createClient();
   const days = getWeekDays(mondayISO);
 
-  const { data, error } = await supabase
-    .from("todos")
-    .select(TODO_SELECT)
-    .gte("due_date", days[0])
-    .lte("due_date", days[6])
-    .order("due_time", { ascending: true, nullsFirst: true });
+  const [{ data, error }, projected] = await Promise.all([
+    supabase
+      .from("todos")
+      .select(TODO_SELECT)
+      .gte("due_date", days[0])
+      .lte("due_date", days[6])
+      .order("due_time", { ascending: true, nullsFirst: true }),
+    getProjectedRecurringTodos(supabase, days[0], days[6]),
+  ]);
 
   if (error) throw new Error(error.message);
-  return withGroupNames(supabase, toTodoRows(data).map(mapTodo));
+  return withGroupNames(supabase, [...toTodoRows(data).map(mapTodo), ...projected]);
 }
 
 export interface TodoAlerts {
