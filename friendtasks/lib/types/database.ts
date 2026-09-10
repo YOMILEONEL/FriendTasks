@@ -3,6 +3,15 @@ export type TodoStatus = "open" | "done";
 export type GroupRole = "admin" | "member";
 export type Theme = "light" | "dark";
 export type Recurrence = "weekly" | "monthly";
+export type NotificationType = "assigned" | "comment";
+export type ActivityAction =
+  | "todo_created"
+  | "todo_completed"
+  | "todo_deleted"
+  | "member_joined"
+  | "member_left"
+  | "list_created"
+  | "list_deleted";
 
 export interface Database {
   public: {
@@ -88,6 +97,7 @@ export interface Database {
           owner_id: string;
           group_id: string | null;
           list_id: string | null;
+          claimable: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -104,6 +114,7 @@ export interface Database {
           owner_id: string;
           group_id?: string | null;
           list_id?: string | null;
+          claimable?: boolean;
         };
         Update: {
           title?: string;
@@ -116,6 +127,7 @@ export interface Database {
           recurrence?: Recurrence | null;
           group_id?: string | null;
           list_id?: string | null;
+          claimable?: boolean;
         };
         Relationships: [];
       };
@@ -162,6 +174,130 @@ export interface Database {
             referencedColumns: ["id"];
           }
         ];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: NotificationType;
+          todo_id: string | null;
+          group_id: string | null;
+          list_id: string | null;
+          actor_id: string | null;
+          message: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: never;
+        Update: {
+          is_read?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      activity_log: {
+        Row: {
+          id: string;
+          group_id: string;
+          actor_id: string | null;
+          action: ActivityAction;
+          detail: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      todo_comments: {
+        Row: {
+          id: string;
+          todo_id: string;
+          author_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          todo_id: string;
+          author_id: string;
+          content: string;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "todo_comments_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      todo_attachments: {
+        Row: {
+          id: string;
+          todo_id: string;
+          storage_path: string;
+          file_name: string;
+          file_size: number | null;
+          uploaded_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          todo_id: string;
+          storage_path: string;
+          file_name: string;
+          file_size?: number | null;
+          uploaded_by: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      group_notes: {
+        Row: {
+          group_id: string;
+          content: string;
+          updated_at: string;
+        };
+        Insert: {
+          group_id: string;
+          content?: string;
+        };
+        Update: {
+          content?: string;
+        };
+        Relationships: [];
+      };
+      list_notes: {
+        Row: {
+          list_id: string;
+          content: string;
+          updated_at: string;
+        };
+        Insert: {
+          list_id: string;
+          content?: string;
+        };
+        Update: {
+          content?: string;
+        };
+        Relationships: [];
       };
       subtasks: {
         Row: {

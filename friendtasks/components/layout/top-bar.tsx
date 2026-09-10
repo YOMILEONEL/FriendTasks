@@ -3,15 +3,21 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LogoutButton } from "@/components/layout/logout-button";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import type { Theme } from "@/lib/types/database";
+import type { NotificationView } from "@/lib/data/notifications";
 
 export function TopBar({
   displayName,
   theme,
+  userId,
+  initialNotifications,
   onMenuClick,
 }: {
   displayName: string;
   theme: Theme;
+  userId: string;
+  initialNotifications: NotificationView[];
   onMenuClick: () => void;
 }) {
   return (
@@ -27,6 +33,7 @@ export function TopBar({
         </svg>
       </button>
       <div className="flex flex-1 items-center justify-end gap-3">
+        <NotificationBell initialNotifications={initialNotifications} userId={userId} />
         <ThemeToggle theme={theme} />
         <Link
           href="/settings"

@@ -57,6 +57,7 @@ export function TodoModal({
             action={action}
             todo={todo}
             todoId={todo?.id}
+            groupId={todo?.group_id ?? undefined}
             defaultDueDate={date}
             defaultDueTime={time}
             submitLabel={todo ? "Speichern" : "Erstellen"}

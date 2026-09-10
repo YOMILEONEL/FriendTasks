@@ -30,7 +30,14 @@ export function TodoForm({
   action: (formData: FormData) => Promise<void>;
   todo?: Pick<
     Todo,
-    "title" | "description" | "due_date" | "due_time" | "due_time_end" | "priority" | "recurrence"
+    | "title"
+    | "description"
+    | "due_date"
+    | "due_time"
+    | "due_time_end"
+    | "priority"
+    | "recurrence"
+    | "claimable"
   >;
   // Id of the todo being edited, so it can be excluded from the overlap
   // check below — omit when creating a new todo.
@@ -136,6 +143,17 @@ export function TodoForm({
           <option value="monthly">Monatlich</option>
         </Select>
       </div>
+      {groupId && (
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            name="claimable"
+            defaultChecked={todo?.claimable ?? false}
+            className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+          />
+          Offen für alle (kein fester Owner)
+        </label>
+      )}
       <div>
         <Label>Priorität</Label>
         <div className="flex gap-2">

@@ -1,18 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { verifySession } from "@/lib/data/dal";
 import { nextRecurrenceDate } from "@/lib/utils/date";
+import { revalidateTodoViews } from "@/lib/utils/revalidate";
 import { SubtaskInputSchema, TodoInputSchema } from "@/lib/validation/todo";
-
-function revalidateTodoViews() {
-  for (const path of ["/today", "/upcoming", "/inbox", "/all", "/dashboard", "/calendar"]) {
-    revalidatePath(path);
-  }
-  revalidatePath("/groups", "layout");
-  revalidatePath("/lists", "layout");
-}
 
 // Returns the titles of todos visible to the current user (own + group
 // todos, via RLS) that overlap the given time range on the given day — used
@@ -81,6 +74,7 @@ export async function createTodo(formData: FormData) {
   const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence } = validated.data;
   const groupId = formData.get("groupId");
   const listId = formData.get("listId");
+  const claimable = formData.get("claimable") === "on";
   const supabase = await createClient();
 
   const { error } = await supabase.from("todos").insert({
@@ -94,6 +88,7 @@ export async function createTodo(formData: FormData) {
     owner_id: session.userId,
     group_id: typeof groupId === "string" && groupId ? groupId : null,
     list_id: typeof listId === "string" && listId ? listId : null,
+    claimable: typeof groupId === "string" && groupId ? claimable : false,
   });
 
   if (error) throw new Error(error.message);
@@ -118,6 +113,7 @@ export async function updateTodo(todoId: string, formData: FormData) {
   }
 
   const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence } = validated.data;
+  const claimable = formData.get("claimable") === "on";
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -130,6 +126,7 @@ export async function updateTodo(todoId: string, formData: FormData) {
       due_time_end: dueTimeEnd || null,
       priority,
       recurrence: recurrence === "none" ? null : recurrence,
+      claimable,
     })
     .eq("id", todoId);
 
@@ -242,6 +239,127 @@ export async function setTodoTags(todoId: string, tagIds: string[]) {
       .from("todo_tags")
       .insert(tagIds.map((tagId) => ({ todo_id: todoId, tag_id: tagId })));
     if (insertError) throw new Error(insertError.message);
+  }
+
+  revalidateTodoViews();
+}
+
+// Claims a todo marked "offen für alle" (FR-36): assigns the caller and
+// clears claimable so it behaves like a normally assigned todo from here on.
+export async function claimTodo(todoId: string) {
+  const session = await verifySession();
+  const supabase = await createClient();
+
+  const { error: assignError } = await supabase
+    .from("todo_assignees")
+    .insert({ todo_id: todoId, user_id: session.userId });
+  if (assignError) throw new Error(assignError.message);
+
+  const { error } = await supabase.from("todos").update({ claimable: false }).eq("id", todoId);
+  if (error) throw new Error(error.message);
+  revalidateTodoViews();
+}
+
+// Duplicates a todo (FR-21): copies the reusable structure (title,
+// schedule, priority, tags, subtasks with their checkmarks reset) but not
+// who it's assigned to or its recurrence anchor — a fresh, unclaimed copy
+// to reuse as a template.
+export async function duplicateTodo(todoId: string) {
+  const session = await verifySession();
+  const supabase = await createClient();
+
+  const { data: original, error: fetchError } = await supabase
+    .from("todos")
+    .select("title, description, due_date, due_time, due_time_end, priority, group_id, list_id")
+    .eq("id", todoId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const newId = randomUUID();
+  const { error: insertError } = await supabase.from("todos").insert({
+    id: newId,
+    title: `${original.title} (Kopie)`,
+    description: original.description,
+    due_date: original.due_date,
+    due_time: original.due_time,
+    due_time_end: original.due_time_end,
+    priority: original.priority,
+    owner_id: session.userId,
+    group_id: original.group_id,
+    list_id: original.list_id,
+  });
+  if (insertError) throw new Error(insertError.message);
+
+  const { data: tagLinks } = await supabase.from("todo_tags").select("tag_id").eq("todo_id", todoId);
+  if (tagLinks && tagLinks.length > 0) {
+    await supabase.from("todo_tags").insert(tagLinks.map((t) => ({ todo_id: newId, tag_id: t.tag_id })));
+  }
+
+  const { data: subtasks } = await supabase
+    .from("subtasks")
+    .select("title, position")
+    .eq("todo_id", todoId);
+  if (subtasks && subtasks.length > 0) {
+    await supabase
+      .from("subtasks")
+      .insert(subtasks.map((s) => ({ todo_id: newId, title: s.title, position: s.position })));
+  }
+
+  revalidateTodoViews();
+}
+
+// Quick-Add (FR-24): the natural-language parsing itself runs client-side
+// (parseQuickAdd, which needs the tags/members already loaded on the page);
+// this action just persists the already-parsed fields plus resolved
+// tag/assignee ids in one insert.
+export async function quickAddTodo(formData: FormData) {
+  const session = await verifySession();
+
+  const validated = TodoInputSchema.safeParse({
+    title: formData.get("title"),
+    description: "",
+    dueDate: formData.get("dueDate"),
+    dueTime: formData.get("dueTime"),
+    dueTimeEnd: "",
+    priority: "medium",
+    recurrence: formData.get("recurrence") ?? "none",
+  });
+  if (!validated.success) {
+    throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
+  }
+
+  const { title, dueDate, dueTime, recurrence } = validated.data;
+  const groupId = formData.get("groupId");
+  const listId = formData.get("listId");
+  const tagIds = String(formData.get("tagIds") ?? "")
+    .split(",")
+    .filter(Boolean);
+  const assigneeUserIds = String(formData.get("assigneeUserIds") ?? "")
+    .split(",")
+    .filter(Boolean);
+
+  const supabase = await createClient();
+  const id = randomUUID();
+
+  const { error } = await supabase.from("todos").insert({
+    id,
+    title,
+    due_date: dueDate || null,
+    due_time: dueTime || null,
+    recurrence: recurrence === "none" ? null : recurrence,
+    owner_id: session.userId,
+    group_id: typeof groupId === "string" && groupId ? groupId : null,
+    list_id: typeof listId === "string" && listId ? listId : null,
+  });
+  if (error) throw new Error(error.message);
+
+  if (tagIds.length > 0) {
+    await supabase.from("todo_tags").insert(tagIds.map((tagId) => ({ todo_id: id, tag_id: tagId })));
+  }
+  if (assigneeUserIds.length > 0) {
+    await supabase
+      .from("todo_assignees")
+      .insert(assigneeUserIds.map((userId) => ({ todo_id: id, user_id: userId })));
   }
 
   revalidateTodoViews();

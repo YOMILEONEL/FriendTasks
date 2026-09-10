@@ -3,14 +3,20 @@ import { verifySession } from "@/lib/data/dal";
 import { getGroup } from "@/lib/data/groups";
 import { getGroupLists } from "@/lib/data/lists";
 import { getGroupTodos, getUserTags } from "@/lib/data/todos";
+import { getGroupActivity } from "@/lib/data/activity";
+import { getGroupNotes } from "@/lib/data/notes";
 import { createGroupList } from "@/lib/actions/lists";
+import { saveGroupNotes } from "@/lib/actions/notes";
 import { MemberList } from "@/components/groups/member-list";
 import { InviteLink } from "@/components/groups/invite-link";
+import { ActivityFeed } from "@/components/groups/activity-feed";
 import { NewTodo } from "@/components/todo/new-todo";
+import { QuickAdd } from "@/components/todo/quick-add";
 import { TodoList } from "@/components/todo/todo-list";
 import { TodoFilterBar } from "@/components/todo/todo-filter-bar";
 import { DeleteGroupButton } from "@/components/groups/delete-group-button";
 import { DeleteListButton } from "@/components/lists/delete-list-button";
+import { NotesEditor } from "@/components/shared/notes-editor";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import type { TodoFilters } from "@/lib/types/todo";
@@ -29,10 +35,12 @@ export default async function GroupDetailPage({
   if (!group) notFound();
 
   const filters = (await searchParams) as TodoFilters;
-  const [todos, tags, lists] = await Promise.all([
+  const [todos, tags, lists, activity, notes] = await Promise.all([
     getGroupTodos(groupId, filters),
     getUserTags(),
     getGroupLists(groupId),
+    getGroupActivity(groupId),
+    getGroupNotes(groupId),
   ]);
 
   const currentMember = group.members.find((m) => m.user_id === session.userId);
@@ -62,10 +70,20 @@ export default async function GroupDetailPage({
         </div>
       )}
 
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Notizen</h2>
+        <NotesEditor initialContent={notes} onSave={saveGroupNotes.bind(null, groupId)} />
+      </div>
+
       <TodoFilterBar basePath={`/groups/${groupId}`} tags={tags} />
 
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Todos</h2>
+        <QuickAdd
+          tags={tags}
+          members={group.members.map((m) => ({ user_id: m.user_id, display_name: m.display_name }))}
+          groupId={groupId}
+        />
         <NewTodo groupId={groupId} />
         <TodoList
           todos={unlistedTodos}
@@ -104,6 +122,11 @@ export default async function GroupDetailPage({
             Erstellen
           </Button>
         </form>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Aktivität</h2>
+        <ActivityFeed entries={activity} />
       </div>
 
       {isAdmin && (

@@ -1,5 +1,6 @@
 import { getTodayTodos, getUserTags } from "@/lib/data/todos";
 import { NewTodo } from "@/components/todo/new-todo";
+import { QuickAdd } from "@/components/todo/quick-add";
 import { TodoList } from "@/components/todo/todo-list";
 import { TodoFilterBar } from "@/components/todo/todo-filter-bar";
 import type { TodoFilters } from "@/lib/types/todo";
@@ -15,6 +16,7 @@ export default async function TodayPage({
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Heute</h1>
+      <QuickAdd tags={tags} />
       <NewTodo />
       <TodoFilterBar basePath="/today" tags={tags} />
       <TodoList todos={todos} allTags={tags} emptyMessage="Für heute steht nichts an." />

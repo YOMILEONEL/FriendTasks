@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteTodo, toggleTodoStatus, updateTodo } from "@/lib/actions/todos";
+import { claimTodo, deleteTodo, duplicateTodo, toggleTodoStatus, updateTodo } from "@/lib/actions/todos";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { PriorityBadge } from "@/components/todo/priority-badge";
 import { SubtaskList } from "@/components/todo/subtask-list";
 import { TagPicker } from "@/components/todo/tag-picker";
 import { TodoForm } from "@/components/todo/todo-form";
+import { CommentList } from "@/components/todo/comment-list";
+import { AttachmentList } from "@/components/todo/attachment-list";
 import { AssigneePicker } from "@/components/groups/assignee-picker";
 import { formatDueDate, formatTimeRange } from "@/lib/utils/date";
 import type { Tag, TodoWithRelations } from "@/lib/types/todo";
@@ -41,6 +43,18 @@ export function TodoItem({
     if (!confirm(`„${todo.title}" wirklich löschen?`)) return;
     startTransition(() => {
       deleteTodo(todo.id);
+    });
+  }
+
+  function handleDuplicate() {
+    startTransition(() => {
+      duplicateTodo(todo.id);
+    });
+  }
+
+  function handleClaim() {
+    startTransition(() => {
+      claimTodo(todo.id);
     });
   }
 
@@ -119,9 +133,27 @@ export function TodoItem({
                 {assignee.display_name}
               </span>
             ))}
+            {todo.claimable && todo.assignees.length === 0 && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                Offen für alle
+              </span>
+            )}
           </div>
         </button>
         <div className="flex gap-1">
+          {todo.claimable && todo.assignees.length === 0 && groupMembers && groupMembers.length > 0 && (
+            <Button
+              variant="ghost"
+              className="px-2 py-1 text-xs text-indigo-600"
+              onClick={handleClaim}
+              disabled={isPending}
+            >
+              Übernehmen
+            </Button>
+          )}
+          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleDuplicate} disabled={isPending}>
+            Duplizieren
+          </Button>
           <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditing((v) => !v)}>
             {editing ? "Schließen" : "Bearbeiten"}
           </Button>
@@ -136,6 +168,7 @@ export function TodoItem({
           <TodoForm
             todo={todo}
             todoId={todo.id}
+            groupId={todo.group_id ?? undefined}
             submitLabel="Speichern"
             action={updateTodo.bind(null, todo.id)}
             onDone={() => setEditing(false)}
@@ -168,6 +201,12 @@ export function TodoItem({
               />
             </div>
           )}
+          <div className="mt-3">
+            <AttachmentList todoId={todo.id} />
+          </div>
+          <div className="mt-3">
+            <CommentList todoId={todo.id} />
+          </div>
         </div>
       )}
     </li>
