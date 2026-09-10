@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export function InviteLink({ token }: { token: string }) {
+export function InviteLink({ token, basePath = "groups" }: { token: string; basePath?: "groups" | "lists" }) {
   const [copied, setCopied] = useState(false);
   // Lazy initializer so this only reads window.location once, on the client
   // (server render gets ""); reflects the actual host without an env var.
   const [url] = useState(() =>
-    typeof window !== "undefined" ? `${window.location.origin}/groups/join/${token}` : ""
+    typeof window !== "undefined" ? `${window.location.origin}/${basePath}/join/${token}` : ""
   );
 
   async function handleCopy() {

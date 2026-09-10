@@ -27,7 +27,9 @@ export function TodoChip({ todo }: { todo: TodoWithRelations }) {
         )}
         {todo.title}
       </div>
-      {todo.group_name && <div className="truncate opacity-75">{todo.group_name}</div>}
+      {(todo.group_name || todo.list_name) && (
+        <div className="truncate opacity-75">{todo.group_name ?? todo.list_name}</div>
+      )}
     </div>
   );
 }

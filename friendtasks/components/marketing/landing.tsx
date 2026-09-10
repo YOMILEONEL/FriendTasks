@@ -158,6 +158,10 @@ export function Landing({ theme }: { theme: Theme }) {
         FriendTasks ·{" "}
         <Link href="/login" className="hover:text-zinc-900 dark:hover:text-zinc-50">
           Anmelden
+        </Link>{" "}
+        ·{" "}
+        <Link href="/privacy" className="hover:text-zinc-900 dark:hover:text-zinc-50">
+          Datenschutz
         </Link>
       </footer>
     </div>

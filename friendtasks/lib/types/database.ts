@@ -12,6 +12,7 @@ export interface Database {
           id: string;
           display_name: string;
           avatar_url: string | null;
+          color: string;
           theme: Theme;
           created_at: string;
         };
@@ -19,11 +20,13 @@ export interface Database {
           id: string;
           display_name: string;
           avatar_url?: string | null;
+          color?: string;
           theme?: Theme;
         };
         Update: {
           display_name?: string;
           avatar_url?: string | null;
+          color?: string;
           theme?: Theme;
         };
         Relationships: [];
@@ -84,6 +87,7 @@ export interface Database {
           recurrence: Recurrence | null;
           owner_id: string;
           group_id: string | null;
+          list_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -99,6 +103,7 @@ export interface Database {
           recurrence?: Recurrence | null;
           owner_id: string;
           group_id?: string | null;
+          list_id?: string | null;
         };
         Update: {
           title?: string;
@@ -110,8 +115,53 @@ export interface Database {
           status?: TodoStatus;
           recurrence?: Recurrence | null;
           group_id?: string | null;
+          list_id?: string | null;
         };
         Relationships: [];
+      };
+      lists: {
+        Row: {
+          id: string;
+          name: string;
+          owner_id: string | null;
+          group_id: string | null;
+          invite_token: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          owner_id?: string | null;
+          group_id?: string | null;
+        };
+        Update: {
+          name?: string;
+        };
+        Relationships: [];
+      };
+      list_members: {
+        Row: {
+          list_id: string;
+          user_id: string;
+          joined_at: string;
+        };
+        Insert: {
+          list_id: string;
+          user_id: string;
+        };
+        Update: {
+          list_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "list_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       subtasks: {
         Row: {
@@ -210,6 +260,14 @@ export interface Database {
         Returns: { id: string; name: string; member_count: number }[];
       };
       join_group_by_token: {
+        Args: { token: string };
+        Returns: string;
+      };
+      get_list_preview: {
+        Args: { token: string };
+        Returns: { id: string; name: string; member_count: number }[];
+      };
+      join_list_by_token: {
         Args: { token: string };
         Returns: string;
       };

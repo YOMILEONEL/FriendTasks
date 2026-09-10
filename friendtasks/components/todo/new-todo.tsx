@@ -9,11 +9,13 @@ export function NewTodo({
   defaultDueDate,
   defaultDueTime,
   groupId,
+  listId,
   startOpen = false,
 }: {
   defaultDueDate?: string;
   defaultDueTime?: string;
   groupId?: string;
+  listId?: string;
   startOpen?: boolean;
 }) {
   const [open, setOpen] = useState(startOpen);
@@ -33,6 +35,7 @@ export function NewTodo({
         defaultDueDate={defaultDueDate}
         defaultDueTime={defaultDueTime}
         groupId={groupId}
+        listId={listId}
         // Once opened via startOpen (e.g. the calendar day panel), keep the
         // form available for adding more than one todo to the same day.
         onDone={startOpen ? undefined : () => setOpen(false)}

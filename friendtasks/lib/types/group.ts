@@ -8,6 +8,7 @@ export interface GroupMember {
   joined_at: string;
   display_name: string;
   avatar_url: string | null;
+  color: string;
 }
 
 export interface GroupWithMembers extends Group {

@@ -8,6 +8,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DashboardIcon,
+  FolderIcon,
   GroupsIcon,
   InboxIcon,
   ListIcon,
@@ -25,6 +26,7 @@ const LINKS = [
   { href: "/all", label: "Alle", icon: ListIcon },
   { href: "/calendar", label: "Kalender", icon: CalendarIcon },
   { href: "/groups", label: "Gruppen", icon: GroupsIcon },
+  { href: "/lists", label: "Listen", icon: FolderIcon },
   { href: "/settings", label: "Einstellungen", icon: SettingsIcon },
 ];
 

@@ -22,9 +22,10 @@ interface TodoRow extends Todo {
 
 // The Supabase client types todo_tags(tags(*)) as an array of
 // `{ tags: Tag | null }` rows; flatten that into a plain `tags: Tag[]`.
-// `assignees` and `group_name` start empty/null here and are filled in
-// afterwards where relevant (getGroupTodos populates assignees;
-// withGroupNames populates group_name for the mixed personal+group views).
+// `assignees`, `group_name` and `list_name` start empty/null here and are
+// filled in afterwards where relevant (getGroupTodos populates assignees;
+// withGroupNames populates group_name/list_name for the mixed personal+
+// group+list views).
 function mapTodo(row: TodoRow): TodoWithRelations {
   const { todo_tags, subtasks, ...rest } = row;
   return {
@@ -33,6 +34,7 @@ function mapTodo(row: TodoRow): TodoWithRelations {
     tags: todo_tags.map((tt) => tt.tags).filter((tag): tag is Tag => tag !== null),
     assignees: [],
     group_name: null,
+    list_name: null,
   };
 }
 
@@ -62,23 +64,35 @@ function applyPostFilters(todos: TodoWithRelations[], filters: TodoFilters): Tod
   return result;
 }
 
-// Looks up group names for whatever group_ids appear in `todos` and returns
-// a copy with `group_name` filled in — used wherever personal and group
-// todos are mixed together in one list.
+// Looks up group and personal-list names for whatever group_ids/list_ids
+// appear in `todos` and returns a copy with `group_name`/`list_name` filled
+// in — used wherever personal, group and shared-list todos are mixed
+// together in one list.
 async function withGroupNames(
   supabase: SupabaseClient<Database>,
   todos: TodoWithRelations[]
 ): Promise<TodoWithRelations[]> {
   const groupIds = [...new Set(todos.map((t) => t.group_id).filter((id): id is string => id !== null))];
-  if (groupIds.length === 0) return todos;
+  const listIds = [...new Set(todos.map((t) => t.list_id).filter((id): id is string => id !== null))];
+  if (groupIds.length === 0 && listIds.length === 0) return todos;
 
-  const { data: groups, error } = await supabase.from("groups").select("id, name").in("id", groupIds);
-  if (error) throw new Error(error.message);
+  const [{ data: groups, error: groupsError }, { data: lists, error: listsError }] = await Promise.all([
+    groupIds.length > 0
+      ? supabase.from("groups").select("id, name").in("id", groupIds)
+      : Promise.resolve({ data: [], error: null }),
+    listIds.length > 0
+      ? supabase.from("lists").select("id, name").in("id", listIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (groupsError) throw new Error(groupsError.message);
+  if (listsError) throw new Error(listsError.message);
 
   const nameByGroupId = new Map((groups ?? []).map((g) => [g.id, g.name]));
+  const nameByListId = new Map((lists ?? []).map((l) => [l.id, l.name]));
   return todos.map((todo) => ({
     ...todo,
     group_name: todo.group_id ? (nameByGroupId.get(todo.group_id) ?? null) : null,
+    list_name: todo.list_id ? (nameByListId.get(todo.list_id) ?? null) : null,
   }));
 }
 
@@ -330,7 +344,7 @@ export async function getGroupTodos(
 
   const { data: assigneeRows, error: assigneeError } = await supabase
     .from("todo_assignees")
-    .select("todo_id, user_id, profiles(display_name, avatar_url)")
+    .select("todo_id, user_id, profiles(display_name, avatar_url, color)")
     .in(
       "todo_id",
       todos.map((t) => t.id)
@@ -346,11 +360,33 @@ export async function getGroupTodos(
       user_id: row.user_id,
       display_name: row.profiles.display_name,
       avatar_url: row.profiles.avatar_url,
+      color: row.profiles.color,
     });
     assigneesByTodoId.set(row.todo_id, list);
   }
 
   return todos.map((todo) => ({ ...todo, assignees: assigneesByTodoId.get(todo.id) ?? [] }));
+}
+
+// Todos filed in a specific personal list (shared or not) — no assignee
+// enrichment here since assignment is a group-only feature (todo_assignees
+// RLS is scoped to group todos).
+export async function getListTodos(
+  listId: string,
+  filters: TodoFilters = {}
+): Promise<TodoWithRelations[]> {
+  await verifySession();
+  const supabase = await createClient();
+
+  let query = supabase.from("todos").select(TODO_SELECT).eq("list_id", listId);
+
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.priority && filters.priority !== "all") query = query.eq("priority", filters.priority);
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return applyPostFilters(toTodoRows(data).map(mapTodo), filters);
 }
 
 export async function getUserTags() {

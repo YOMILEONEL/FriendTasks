@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = [
   "/auth/callback",
   "/icon",
   "/apple-icon",
+  "/privacy",
 ];
 
 function isPublicRoute(pathname: string): boolean {

@@ -82,6 +82,11 @@ export function TodoItem({
                 {todo.group_name}
               </span>
             )}
+            {todo.list_name && (
+              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                {todo.list_name}
+              </span>
+            )}
             {dueDate && (
               <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 {dueDate}
@@ -105,8 +110,12 @@ export function TodoItem({
             {todo.assignees.map((assignee) => (
               <span
                 key={assignee.user_id}
-                className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400"
+                className="flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400"
               >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: assignee.color }}
+                />
                 {assignee.display_name}
               </span>
             ))}

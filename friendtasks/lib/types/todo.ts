@@ -8,6 +8,7 @@ export interface Assignee {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
+  color: string;
 }
 
 export interface TodoWithRelations extends Todo {
@@ -17,6 +18,8 @@ export interface TodoWithRelations extends Todo {
   // Populated whenever personal and group todos are mixed together in one
   // list (getWeekTodos, getAllTodos) and need to be told apart visually.
   group_name: string | null;
+  // Same idea, for todos filed in a personal list shared with friends.
+  list_name: string | null;
 }
 
 export interface TodoFilters {

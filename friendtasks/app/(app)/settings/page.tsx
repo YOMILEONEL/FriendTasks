@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getProfile } from "@/lib/data/dal";
 import { getUserTags } from "@/lib/data/todos";
 import { ProfileForm } from "@/components/settings/profile-form";
@@ -13,7 +14,7 @@ export default async function SettingsPage() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Profil</h2>
-        <ProfileForm displayName={profile.display_name} />
+        <ProfileForm displayName={profile.display_name} color={profile.color} />
       </section>
 
       <section className="space-y-3">
@@ -25,6 +26,12 @@ export default async function SettingsPage() {
         <h2 className="text-sm font-medium text-red-600 dark:text-red-400">Gefahrenzone</h2>
         <DeleteAccount />
       </section>
+
+      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        <Link href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300">
+          Datenschutzerklärung
+        </Link>
+      </p>
     </div>
   );
 }

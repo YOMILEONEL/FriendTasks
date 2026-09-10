@@ -32,7 +32,7 @@ export async function getGroup(groupId: string): Promise<GroupWithMembers | null
 
   const { data: members, error: membersError } = await supabase
     .from("group_members")
-    .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
+    .select("user_id, role, joined_at, profiles(display_name, avatar_url, color)")
     .eq("group_id", groupId)
     .order("joined_at", { ascending: true });
 
@@ -46,6 +46,7 @@ export async function getGroup(groupId: string): Promise<GroupWithMembers | null
       joined_at: member.joined_at,
       display_name: member.profiles?.display_name ?? "Unbekannt",
       avatar_url: member.profiles?.avatar_url ?? null,
+      color: member.profiles?.color ?? "#6366f1",
     })),
   };
 }

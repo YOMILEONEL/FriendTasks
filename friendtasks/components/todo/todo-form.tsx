@@ -23,6 +23,7 @@ export function TodoForm({
   defaultDueTime,
   defaultDueTimeEnd,
   groupId,
+  listId,
   onDone,
   submitLabel = "Todo erstellen",
 }: {
@@ -38,6 +39,10 @@ export function TodoForm({
   defaultDueTime?: string;
   defaultDueTimeEnd?: string;
   groupId?: string;
+  // Personal/shared list this todo is filed under — only meaningful when
+  // creating a todo from a list's own page (list assignment can't be
+  // changed afterwards via this form).
+  listId?: string;
   onDone?: () => void;
   submitLabel?: string;
 }) {
@@ -73,6 +78,7 @@ export function TodoForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {groupId && <input type="hidden" name="groupId" value={groupId} />}
+      {listId && <input type="hidden" name="listId" value={listId} />}
       <input type="hidden" name="priority" value={priority} />
       <div>
         <Label htmlFor="title">Titel</Label>

@@ -1,33 +1,35 @@
 "use client";
 
 import { useTransition } from "react";
-import { leaveGroup, removeMember } from "@/lib/actions/groups";
-import type { GroupMember } from "@/lib/types/group";
+import { leaveList, removeListMember } from "@/lib/actions/lists";
+import type { ListMember } from "@/lib/types/list";
 
-export function MemberList({
-  groupId,
+export function ListMemberList({
+  listId,
   members,
   currentUserId,
-  isAdmin,
+  ownerId,
+  isOwner,
 }: {
-  groupId: string;
-  members: GroupMember[];
+  listId: string;
+  members: ListMember[];
   currentUserId: string;
-  isAdmin: boolean;
+  ownerId: string;
+  isOwner: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
 
   function handleRemove(userId: string, name: string) {
-    if (!confirm(`„${name}" wirklich aus der Gruppe entfernen?`)) return;
+    if (!confirm(`„${name}" wirklich aus der Liste entfernen?`)) return;
     startTransition(() => {
-      removeMember(groupId, userId);
+      removeListMember(listId, userId);
     });
   }
 
   function handleLeave() {
-    if (!confirm("Diese Gruppe wirklich verlassen?")) return;
+    if (!confirm("Diese Liste wirklich verlassen?")) return;
     startTransition(() => {
-      leaveGroup(groupId);
+      leaveList(listId);
     });
   }
 
@@ -35,6 +37,7 @@ export function MemberList({
     <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 dark:divide-zinc-900 dark:border-zinc-800">
       {members.map((member) => {
         const isSelf = member.user_id === currentUserId;
+        const isListOwner = member.user_id === ownerId;
         return (
           <li key={member.user_id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
             <span className="flex min-w-0 items-center gap-2 truncate text-zinc-900 dark:text-zinc-50">
@@ -48,12 +51,12 @@ export function MemberList({
               </span>
             </span>
             <div className="flex shrink-0 items-center gap-2">
-              {member.role === "admin" && (
+              {isListOwner && (
                 <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                  Admin
+                  Owner
                 </span>
               )}
-              {isSelf && (
+              {isSelf && !isListOwner && (
                 <button
                   type="button"
                   onClick={handleLeave}
@@ -63,7 +66,7 @@ export function MemberList({
                   Verlassen
                 </button>
               )}
-              {isAdmin && !isSelf && (
+              {isOwner && !isSelf && (
                 <button
                   type="button"
                   onClick={() => handleRemove(member.user_id, member.display_name)}

@@ -11,15 +11,19 @@ import type { FormState } from "@/lib/validation/auth";
 export async function updateProfile(state: FormState, formData: FormData): Promise<FormState> {
   const session = await verifySession();
   const displayName = String(formData.get("displayName") ?? "").trim();
+  const color = String(formData.get("color") ?? "");
 
   if (displayName.length < 2) {
     return { errors: { displayName: ["Mindestens 2 Zeichen."] } };
+  }
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+    return { message: "Ungültige Farbe." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: displayName })
+    .update({ display_name: displayName, color })
     .eq("id", session.userId);
 
   if (error) {
@@ -27,6 +31,8 @@ export async function updateProfile(state: FormState, formData: FormData): Promi
   }
 
   revalidatePath("/settings", "layout");
+  revalidatePath("/groups", "layout");
+  revalidatePath("/lists", "layout");
   return { message: "Profil aktualisiert." };
 }
 

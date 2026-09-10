@@ -11,6 +11,7 @@ function revalidateTodoViews() {
     revalidatePath(path);
   }
   revalidatePath("/groups", "layout");
+  revalidatePath("/lists", "layout");
 }
 
 // Returns the titles of todos visible to the current user (own + group
@@ -79,6 +80,7 @@ export async function createTodo(formData: FormData) {
 
   const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence } = validated.data;
   const groupId = formData.get("groupId");
+  const listId = formData.get("listId");
   const supabase = await createClient();
 
   const { error } = await supabase.from("todos").insert({
@@ -91,6 +93,7 @@ export async function createTodo(formData: FormData) {
     recurrence: recurrence === "none" ? null : recurrence,
     owner_id: session.userId,
     group_id: typeof groupId === "string" && groupId ? groupId : null,
+    list_id: typeof listId === "string" && listId ? listId : null,
   });
 
   if (error) throw new Error(error.message);
