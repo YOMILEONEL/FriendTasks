@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { verifySession } from "@/lib/data/dal";
-import { todayISO, endOfWeekISO, getWeekDays } from "@/lib/utils/date";
+import { addMinutesClamped, endOfWeekISO, getWeekDays, nowTimeISO, todayISO } from "@/lib/utils/date";
 import type { Assignee, Subtask, Tag, Todo, TodoFilters, TodoWithRelations } from "@/lib/types/todo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database";
@@ -94,6 +94,9 @@ export async function getTodayTodos(filters: TodoFilters = {}): Promise<TodoWith
   return applyPostFilters(todos, filters);
 }
 
+// Covers the whole week including today (not just the days after it), so a
+// todo due today appears both here and on "Heute" — that overlap is
+// intentional, "Diese Woche" is meant to show everything due this week.
 export async function getUpcomingTodos(filters: TodoFilters = {}): Promise<TodoWithRelations[]> {
   await verifySession();
   const supabase = await createClient();
@@ -101,7 +104,7 @@ export async function getUpcomingTodos(filters: TodoFilters = {}): Promise<TodoW
   let query = supabase
     .from("todos")
     .select(TODO_SELECT)
-    .gt("due_date", todayISO())
+    .gte("due_date", todayISO())
     .lte("due_date", endOfWeekISO());
 
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
@@ -180,6 +183,53 @@ export async function getWeekTodos(mondayISO: string): Promise<TodoWithRelations
 
   if (error) throw new Error(error.message);
   return withGroupNames(supabase, toTodoRows(data).map(mapTodo));
+}
+
+export interface TodoAlerts {
+  overdue: TodoWithRelations[];
+  dueSoon: TodoWithRelations[];
+}
+
+// For the dashboard's "attention needed" banner: open todos that are either
+// already overdue (past days, or today with a due_time earlier than now) or
+// due within the next hour. Date-only todos due today aren't classified
+// either way — without a time, "today" isn't overdue until the day is over.
+export async function getTodoAlerts(): Promise<TodoAlerts> {
+  await verifySession();
+  const supabase = await createClient();
+
+  const today = todayISO();
+  const { data, error } = await supabase
+    .from("todos")
+    .select(TODO_SELECT)
+    .eq("status", "open")
+    .lte("due_date", today);
+
+  if (error) throw new Error(error.message);
+  const todos = await withGroupNames(supabase, toTodoRows(data).map(mapTodo));
+
+  const now = nowTimeISO();
+  const soonLimit = addMinutesClamped(now, 60);
+
+  const overdue: TodoWithRelations[] = [];
+  const dueSoon: TodoWithRelations[] = [];
+
+  for (const todo of todos) {
+    if (!todo.due_date) continue;
+    if (todo.due_date < today) {
+      overdue.push(todo);
+      continue;
+    }
+    if (!todo.due_time) continue;
+    const time = todo.due_time.slice(0, 5);
+    if (time < now) {
+      overdue.push(todo);
+    } else if (time <= soonLimit) {
+      dueSoon.push(todo);
+    }
+  }
+
+  return { overdue, dueSoon };
 }
 
 export async function getGroupTodos(

@@ -39,6 +39,24 @@ export function formatTime(dueTime: string | null): string | null {
   return dueTime.slice(0, 5);
 }
 
+export function nowTimeISO(): string {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+// Adds minutes to a "HH:MM" time, clamped to "23:59" instead of wrapping
+// into the next day (good enough for a "due within the next hour" window).
+export function addMinutesClamped(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  if (total >= 24 * 60) return "23:59";
+  const hh = String(Math.floor(total / 60)).padStart(2, "0");
+  const mm = String(total % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 export function formatTimeRange(start: string | null, end: string | null): string | null {
   const startLabel = formatTime(start);
   if (!startLabel) return null;

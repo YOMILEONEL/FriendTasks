@@ -3,27 +3,33 @@ import {
   getAllTodos,
   getInboxTodos,
   getTodayTodos,
+  getTodoAlerts,
   getUpcomingTodos,
   getUserTags,
 } from "@/lib/data/todos";
 import { OptionCard } from "@/components/dashboard/option-card";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { TodoAlertsBanner } from "@/components/dashboard/todo-alerts";
 import { TodoList } from "@/components/todo/todo-list";
 import { InboxIcon, ListIcon, TodayIcon, UpcomingIcon } from "@/components/layout/icons";
 
 export default async function DashboardPage() {
-  const [profile, todayTodos, upcomingTodos, inboxTodos, allOpenTodos, tags] = await Promise.all([
-    getProfile(),
-    getTodayTodos(),
-    getUpcomingTodos(),
-    getInboxTodos(),
-    getAllTodos({ status: "open" }),
-    getUserTags(),
-  ]);
+  const [profile, alerts, todayTodos, upcomingTodos, inboxTodos, allOpenTodos, tags] =
+    await Promise.all([
+      getProfile(),
+      getTodoAlerts(),
+      getTodayTodos(),
+      getUpcomingTodos(),
+      getInboxTodos(),
+      getAllTodos({ status: "open" }),
+      getUserTags(),
+    ]);
 
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-semibold">Hallo, {profile.display_name}</h1>
+
+      <TodoAlertsBanner overdue={alerts.overdue} dueSoon={alerts.dueSoon} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard href="/today" label="Heute offen" value={todayTodos.length} icon={TodayIcon} />
