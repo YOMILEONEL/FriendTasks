@@ -42,7 +42,7 @@ Account-Löschung (`lib/supabase/admin.ts`) verwendet und darf niemals mit
 ## 4. E-Mail-Bestätigung (Confirm email)
 
 Unter **Authentication → Providers → Email** ist standardmäßig "Confirm email"
-aktiviert – neue Nutzer müssen ihre Adresse per Link bestätigen, bevor sie sich
+aktiviert, neue Nutzer müssen ihre Adresse per Link bestätigen, bevor sie sich
 einloggen können. Für lokale Entwicklung ohne konfigurierten SMTP-Versand kann
 diese Option vorübergehend deaktiviert werden, dann sind neue Konten sofort
 nutzbar.
