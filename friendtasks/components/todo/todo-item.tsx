@@ -126,6 +126,7 @@ export function TodoItem({
         <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <TodoForm
             todo={todo}
+            todoId={todo.id}
             submitLabel="Speichern"
             action={updateTodo.bind(null, todo.id)}
             onDone={() => setEditing(false)}

@@ -13,6 +13,53 @@ function revalidateTodoViews() {
   revalidatePath("/groups", "layout");
 }
 
+// Returns the titles of todos visible to the current user (own + group
+// todos, via RLS) that overlap the given time range on the given day — used
+// to warn, not to block, so this only reports overlaps rather than
+// rejecting them. Done todos don't count: a finished task doesn't occupy
+// the slot anymore. A todo without an end time is treated as occupying a
+// single instant, so two todos at the exact same start time still count
+// as overlapping.
+export async function checkTodoOverlap({
+  dueDate,
+  dueTime,
+  dueTimeEnd,
+  excludeTodoId,
+}: {
+  dueDate: string;
+  dueTime: string;
+  dueTimeEnd?: string;
+  excludeTodoId?: string;
+}): Promise<string[]> {
+  await verifySession();
+  if (!dueDate || !dueTime) return [];
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("todos")
+    .select("id, title, due_time, due_time_end")
+    .eq("due_date", dueDate)
+    .eq("status", "open")
+    .not("due_time", "is", null);
+
+  if (excludeTodoId) query = query.neq("id", excludeTodoId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const start = dueTime.slice(0, 5);
+  const end = (dueTimeEnd || dueTime).slice(0, 5);
+
+  return (data ?? [])
+    .filter((row) => {
+      if (!row.due_time) return false;
+      const otherStart = row.due_time.slice(0, 5);
+      const otherEnd = (row.due_time_end ?? row.due_time).slice(0, 5);
+      return start <= otherEnd && otherStart <= end;
+    })
+    .map((row) => row.title);
+}
+
 export async function createTodo(formData: FormData) {
   const session = await verifySession();
 

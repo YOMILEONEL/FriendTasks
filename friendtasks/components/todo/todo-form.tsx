@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { checkTodoOverlap } from "@/lib/actions/todos";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -17,6 +18,7 @@ const PRIORITIES: { value: Priority; label: string; className: string }[] = [
 export function TodoForm({
   action,
   todo,
+  todoId,
   defaultDueDate,
   defaultDueTime,
   defaultDueTimeEnd,
@@ -29,6 +31,9 @@ export function TodoForm({
     Todo,
     "title" | "description" | "due_date" | "due_time" | "due_time_end" | "priority" | "recurrence"
   >;
+  // Id of the todo being edited, so it can be excluded from the overlap
+  // check below — omit when creating a new todo.
+  todoId?: string;
   defaultDueDate?: string;
   defaultDueTime?: string;
   defaultDueTimeEnd?: string;
@@ -45,6 +50,20 @@ export function TodoForm({
     const formData = new FormData(form);
 
     startTransition(async () => {
+      const dueDate = String(formData.get("dueDate") ?? "");
+      const dueTime = String(formData.get("dueTime") ?? "");
+      const dueTimeEnd = String(formData.get("dueTimeEnd") ?? "");
+
+      if (dueDate && dueTime) {
+        const overlapping = await checkTodoOverlap({ dueDate, dueTime, dueTimeEnd, excludeTodoId: todoId });
+        if (overlapping.length > 0) {
+          const proceed = confirm(
+            `Diese Aufgabe überschneidet sich zeitlich mit: ${overlapping.join(", ")}. Trotzdem speichern?`
+          );
+          if (!proceed) return;
+        }
+      }
+
       await action(formData);
       form.reset();
       onDone?.();
