@@ -3,8 +3,9 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { formatTime } from "@/lib/utils/date";
-import type { Priority } from "@/lib/types/database";
+import type { Priority, Recurrence } from "@/lib/types/database";
 import type { Todo } from "@/lib/types/todo";
 
 const PRIORITIES: { value: Priority; label: string; className: string }[] = [
@@ -24,7 +25,10 @@ export function TodoForm({
   submitLabel = "Todo erstellen",
 }: {
   action: (formData: FormData) => Promise<void>;
-  todo?: Pick<Todo, "title" | "description" | "due_date" | "due_time" | "due_time_end" | "priority">;
+  todo?: Pick<
+    Todo,
+    "title" | "description" | "due_date" | "due_time" | "due_time_end" | "priority" | "recurrence"
+  >;
   defaultDueDate?: string;
   defaultDueTime?: string;
   defaultDueTimeEnd?: string;
@@ -98,6 +102,14 @@ export function TodoForm({
             defaultValue={formatTime(todo?.due_time_end ?? null) ?? defaultDueTimeEnd ?? ""}
           />
         </div>
+      </div>
+      <div>
+        <Label htmlFor="recurrence">Wiederholung</Label>
+        <Select id="recurrence" name="recurrence" defaultValue={todo?.recurrence ?? ("none" satisfies "none" | Recurrence)}>
+          <option value="none">Keine</option>
+          <option value="weekly">Wöchentlich</option>
+          <option value="monthly">Monatlich</option>
+        </Select>
       </div>
       <div>
         <Label>Priorität</Label>

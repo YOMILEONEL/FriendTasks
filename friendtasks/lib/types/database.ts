@@ -2,6 +2,7 @@ export type Priority = "low" | "medium" | "high";
 export type TodoStatus = "open" | "done";
 export type GroupRole = "admin" | "member";
 export type Theme = "light" | "dark";
+export type Recurrence = "weekly" | "monthly";
 
 export interface Database {
   public: {
@@ -80,6 +81,7 @@ export interface Database {
           due_time_end: string | null;
           priority: Priority;
           status: TodoStatus;
+          recurrence: Recurrence | null;
           owner_id: string;
           group_id: string | null;
           created_at: string;
@@ -94,6 +96,7 @@ export interface Database {
           due_time_end?: string | null;
           priority?: Priority;
           status?: TodoStatus;
+          recurrence?: Recurrence | null;
           owner_id: string;
           group_id?: string | null;
         };
@@ -105,6 +108,7 @@ export interface Database {
           due_time_end?: string | null;
           priority?: Priority;
           status?: TodoStatus;
+          recurrence?: Recurrence | null;
           group_id?: string | null;
         };
         Relationships: [];

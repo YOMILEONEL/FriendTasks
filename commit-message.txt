@@ -1,0 +1,12 @@
+Add recurring todos (weekly/monthly)
+
+Todos can now be marked "Wöchentlich" (weekly, same weekday/time) or
+"Monatlich" (monthly, same day of month, clamped to the month's last
+day where needed). There's no background job: completing a recurring
+todo creates the next occurrence right then, copying title, description,
+priority, tags and assignees but starting a fresh (empty) subtask
+checklist. A small recurrence indicator shows on the todo row and in
+the calendar chip.
+
+Needs a new column: run supabase/migrations/0005_recurring_todos.sql
+in the Supabase SQL editor.

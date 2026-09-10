@@ -69,6 +69,14 @@ export function TodoItem({
               {todo.title}
             </span>
             <PriorityBadge priority={todo.priority} />
+            {todo.recurrence && (
+              <span
+                className="text-xs text-zinc-400 dark:text-zinc-500"
+                title={todo.recurrence === "weekly" ? "Wiederholt sich wöchentlich" : "Wiederholt sich monatlich"}
+              >
+                ↻ {todo.recurrence === "weekly" ? "Wöchentlich" : "Monatlich"}
+              </span>
+            )}
             {todo.group_name && (
               <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
                 {todo.group_name}

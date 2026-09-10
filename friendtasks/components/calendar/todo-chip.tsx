@@ -19,7 +19,14 @@ export function TodoChip({ todo }: { todo: TodoWithRelations }) {
       title={todo.title}
     >
       {time && <div className="font-medium">{time}</div>}
-      <div className="truncate">{todo.title}</div>
+      <div className="truncate">
+        {todo.recurrence && (
+          <span title={todo.recurrence === "weekly" ? "Wiederholt sich wöchentlich" : "Wiederholt sich monatlich"}>
+            ↻{" "}
+          </span>
+        )}
+        {todo.title}
+      </div>
       {todo.group_name && <div className="truncate opacity-75">{todo.group_name}</div>}
     </div>
   );

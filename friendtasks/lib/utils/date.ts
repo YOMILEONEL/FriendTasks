@@ -15,6 +15,22 @@ export function todayISO(): string {
   return toISODate(new Date());
 }
 
+// Next occurrence for a recurring todo: weekly just adds 7 days (JS Date
+// rolls month/year boundaries automatically). Monthly keeps the same day of
+// month, clamped to the target month's last day (e.g. Jan 31 -> Feb 28/29).
+export function nextRecurrenceDate(dueDateISO: string, recurrence: "weekly" | "monthly"): string {
+  const [year, month, day] = dueDateISO.split("-").map(Number);
+
+  if (recurrence === "weekly") {
+    return toISODate(new Date(year, month - 1, day + 7));
+  }
+
+  const targetMonthIndex = month; // 0-indexed next month
+  const lastDayOfTargetMonth = new Date(year, targetMonthIndex + 1, 0).getDate();
+  const clampedDay = Math.min(day, lastDayOfTargetMonth);
+  return toISODate(new Date(year, targetMonthIndex, clampedDay));
+}
+
 export function endOfWeekISO(): string {
   const now = new Date();
   const day = now.getDay(); // 0 = Sunday

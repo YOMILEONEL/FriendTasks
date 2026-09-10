@@ -4,6 +4,7 @@ import { useRef, useTransition } from "react";
 import { createSubtask, deleteSubtask, toggleSubtask } from "@/lib/actions/todos";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { Subtask } from "@/lib/types/todo";
 
 export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Subtask[] }) {
@@ -66,9 +67,12 @@ export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Su
         <Input
           name="title"
           placeholder="Unteraufgabe hinzufügen…"
-          className="py-1 text-sm"
+          className="min-w-0 flex-1 py-1 text-sm"
           disabled={isPending}
         />
+        <Button type="submit" variant="secondary" className="shrink-0 px-2.5 py-1 text-sm" disabled={isPending}>
+          +
+        </Button>
       </form>
     </div>
   );

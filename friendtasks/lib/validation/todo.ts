@@ -23,9 +23,12 @@ export const TodoInputSchema = z
       .optional()
       .or(z.literal("")),
     priority: PrioritySchema,
+    recurrence: z.enum(["none", "weekly", "monthly"]).default("none"),
   })
   .transform((data) => {
-    if (!data.dueDate) return { ...data, dueTime: "", dueTimeEnd: "" };
+    // A recurring todo needs a date to know when the next occurrence falls
+    // due, so drop recurrence rather than error when there's no date.
+    if (!data.dueDate) return { ...data, dueTime: "", dueTimeEnd: "", recurrence: "none" as const };
     if (!data.dueTime) return { ...data, dueTimeEnd: "" };
     return data;
   })
