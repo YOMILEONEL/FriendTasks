@@ -2,16 +2,21 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signup } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function SignupPage() {
   const [state, action, pending] = useActionState(signup, undefined);
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
 
   return (
     <form action={action} className="space-y-4">
       <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Konto erstellen</h1>
+      {next && <input type="hidden" name="next" value={next} />}
       <div>
         <Label htmlFor="displayName">Anzeigename</Label>
         <Input id="displayName" name="displayName" required autoComplete="nickname" />
@@ -24,21 +29,14 @@ export default function SignupPage() {
       </div>
       <div>
         <Label htmlFor="password">Passwort</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="new-password"
-        />
+        <PasswordInput id="password" name="password" required autoComplete="new-password" />
         <FieldError messages={state?.errors?.password} />
       </div>
       <div>
         <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           required
           autoComplete="new-password"
         />
@@ -52,7 +50,10 @@ export default function SignupPage() {
       </Button>
       <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
         Bereits registriert?{" "}
-        <Link href="/login" className="text-zinc-900 hover:underline dark:text-zinc-50">
+        <Link
+          href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+          className="text-zinc-900 hover:underline dark:text-zinc-50"
+        >
           Anmelden
         </Link>
       </p>

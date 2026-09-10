@@ -8,16 +8,27 @@ import { PriorityBadge } from "@/components/todo/priority-badge";
 import { SubtaskList } from "@/components/todo/subtask-list";
 import { TagPicker } from "@/components/todo/tag-picker";
 import { TodoForm } from "@/components/todo/todo-form";
-import { formatDueDate } from "@/lib/utils/date";
+import { AssigneePicker } from "@/components/groups/assignee-picker";
+import { formatDueDate, formatTimeRange } from "@/lib/utils/date";
 import type { Tag, TodoWithRelations } from "@/lib/types/todo";
+import type { GroupMember } from "@/lib/types/group";
 
-export function TodoItem({ todo, allTags }: { todo: TodoWithRelations; allTags: Tag[] }) {
+export function TodoItem({
+  todo,
+  allTags,
+  groupMembers,
+}: {
+  todo: TodoWithRelations;
+  allTags: Tag[];
+  groupMembers?: GroupMember[];
+}) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const done = todo.status === "done";
   const dueDate = formatDueDate(todo.due_date);
+  const dueTime = formatTimeRange(todo.due_time, todo.due_time_end);
   const openSubtasks = todo.subtasks.filter((s) => !s.is_done).length;
 
   function handleToggle(checked: boolean) {
@@ -58,8 +69,16 @@ export function TodoItem({ todo, allTags }: { todo: TodoWithRelations; allTags: 
               {todo.title}
             </span>
             <PriorityBadge priority={todo.priority} />
+            {todo.group_name && (
+              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                {todo.group_name}
+              </span>
+            )}
             {dueDate && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">{dueDate}</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {dueDate}
+                {dueTime && ` · ${dueTime}`}
+              </span>
             )}
             {todo.subtasks.length > 0 && (
               <span className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -73,6 +92,14 @@ export function TodoItem({ todo, allTags }: { todo: TodoWithRelations; allTags: 
                 style={{ backgroundColor: tag.color, color: "#fff" }}
               >
                 {tag.name}
+              </span>
+            ))}
+            {todo.assignees.map((assignee) => (
+              <span
+                key={assignee.user_id}
+                className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400"
+              >
+                {assignee.display_name}
               </span>
             ))}
           </div>
@@ -113,6 +140,16 @@ export function TodoItem({ todo, allTags }: { todo: TodoWithRelations; allTags: 
               selectedTagIds={todo.tags.map((t) => t.id)}
             />
           </div>
+          {groupMembers && groupMembers.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-1 text-xs text-zinc-400 dark:text-zinc-500">Zugewiesen an</p>
+              <AssigneePicker
+                todoId={todo.id}
+                members={groupMembers}
+                selectedUserIds={todo.assignees.map((a) => a.user_id)}
+              />
+            </div>
+          )}
         </div>
       )}
     </li>

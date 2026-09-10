@@ -6,9 +6,10 @@ import { verifySession } from "@/lib/data/dal";
 import { SubtaskInputSchema, TodoInputSchema } from "@/lib/validation/todo";
 
 function revalidateTodoViews() {
-  for (const path of ["/today", "/upcoming", "/inbox", "/all"]) {
+  for (const path of ["/today", "/upcoming", "/inbox", "/all", "/dashboard", "/calendar"]) {
     revalidatePath(path);
   }
+  revalidatePath("/groups", "layout");
 }
 
 export async function createTodo(formData: FormData) {
@@ -18,6 +19,8 @@ export async function createTodo(formData: FormData) {
     title: formData.get("title"),
     description: formData.get("description"),
     dueDate: formData.get("dueDate"),
+    dueTime: formData.get("dueTime"),
+    dueTimeEnd: formData.get("dueTimeEnd"),
     priority: formData.get("priority") ?? "medium",
   });
 
@@ -25,15 +28,19 @@ export async function createTodo(formData: FormData) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
   }
 
-  const { title, description, dueDate, priority } = validated.data;
+  const { title, description, dueDate, dueTime, dueTimeEnd, priority } = validated.data;
+  const groupId = formData.get("groupId");
   const supabase = await createClient();
 
   const { error } = await supabase.from("todos").insert({
     title,
     description: description || null,
     due_date: dueDate || null,
+    due_time: dueTime || null,
+    due_time_end: dueTimeEnd || null,
     priority,
     owner_id: session.userId,
+    group_id: typeof groupId === "string" && groupId ? groupId : null,
   });
 
   if (error) throw new Error(error.message);
@@ -47,6 +54,8 @@ export async function updateTodo(todoId: string, formData: FormData) {
     title: formData.get("title"),
     description: formData.get("description"),
     dueDate: formData.get("dueDate"),
+    dueTime: formData.get("dueTime"),
+    dueTimeEnd: formData.get("dueTimeEnd"),
     priority: formData.get("priority") ?? "medium",
   });
 
@@ -54,7 +63,7 @@ export async function updateTodo(todoId: string, formData: FormData) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
   }
 
-  const { title, description, dueDate, priority } = validated.data;
+  const { title, description, dueDate, dueTime, dueTimeEnd, priority } = validated.data;
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -63,6 +72,8 @@ export async function updateTodo(todoId: string, formData: FormData) {
       title,
       description: description || null,
       due_date: dueDate || null,
+      due_time: dueTime || null,
+      due_time_end: dueTimeEnd || null,
       priority,
     })
     .eq("id", todoId);
@@ -151,6 +162,26 @@ export async function setTodoTags(todoId: string, tagIds: string[]) {
     const { error: insertError } = await supabase
       .from("todo_tags")
       .insert(tagIds.map((tagId) => ({ todo_id: todoId, tag_id: tagId })));
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  revalidateTodoViews();
+}
+
+export async function setTodoAssignees(todoId: string, userIds: string[]) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { error: deleteError } = await supabase
+    .from("todo_assignees")
+    .delete()
+    .eq("todo_id", todoId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (userIds.length > 0) {
+    const { error: insertError } = await supabase
+      .from("todo_assignees")
+      .insert(userIds.map((userId) => ({ todo_id: todoId, user_id: userId })));
     if (insertError) throw new Error(insertError.message);
   }
 

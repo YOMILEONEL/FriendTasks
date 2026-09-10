@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import { updatePassword } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
-import { FieldError, Input, Label } from "@/components/ui/input";
+import { FieldError, Label } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function ResetPasswordConfirmPage() {
   const [state, action, pending] = useActionState(updatePassword, undefined);
@@ -15,21 +16,14 @@ export default function ResetPasswordConfirmPage() {
       </h1>
       <div>
         <Label htmlFor="password">Neues Passwort</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="new-password"
-        />
+        <PasswordInput id="password" name="password" required autoComplete="new-password" />
         <FieldError messages={state?.errors?.password} />
       </div>
       <div>
         <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           required
           autoComplete="new-password"
         />

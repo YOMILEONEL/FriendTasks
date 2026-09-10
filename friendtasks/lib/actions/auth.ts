@@ -11,6 +11,16 @@ import {
   type FormState,
 } from "@/lib/validation/auth";
 
+// Only ever redirect to a path within our own app (guards against an
+// open-redirect via a crafted `next` value like "//evil.com").
+function resolveNextPath(formData: FormData): string {
+  const next = formData.get("next");
+  if (typeof next === "string" && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+  return "/dashboard";
+}
+
 export async function signup(state: FormState, formData: FormData): Promise<FormState> {
   const validated = SignupSchema.safeParse({
     displayName: formData.get("displayName"),
@@ -43,7 +53,7 @@ export async function signup(state: FormState, formData: FormData): Promise<Form
   // "Confirm email" is disabled in the Supabase project: signUp() already
   // returns an active session, so log the user straight in.
   if (data.session) {
-    redirect("/today");
+    redirect(resolveNextPath(formData));
   }
 
   return {
@@ -69,7 +79,7 @@ export async function login(state: FormState, formData: FormData): Promise<FormS
     return { message: "E-Mail oder Passwort ist falsch." };
   }
 
-  redirect("/today");
+  redirect(resolveNextPath(formData));
 }
 
 export async function logout() {
@@ -131,5 +141,5 @@ export async function updatePassword(
     return { message: error.message };
   }
 
-  redirect("/today");
+  redirect("/dashboard");
 }

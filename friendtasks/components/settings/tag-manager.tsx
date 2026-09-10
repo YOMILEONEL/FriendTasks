@@ -51,10 +51,10 @@ export function TagManager({ tags }: { tags: Tag[] }) {
           });
           formRef.current?.reset();
         }}
-        className="flex items-center gap-2"
+        className="flex flex-wrap items-center gap-2"
       >
-        <Input name="name" placeholder="Neuer Tag" required className="flex-1" />
-        <select name="color" defaultValue={COLORS[0]} className="rounded-md border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900">
+        <Input name="name" placeholder="Neuer Tag" required className="min-w-[120px] flex-1" />
+        <select name="color" defaultValue={COLORS[0]} className="shrink-0 rounded-md border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900">
           {COLORS.map((color) => (
             <option key={color} value={color} style={{ backgroundColor: color }}>
               {color}

@@ -1,0 +1,91 @@
+"use server";
+
+import { randomUUID } from "crypto";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/data/dal";
+import { GroupNameSchema } from "@/lib/validation/groups";
+
+export async function createGroup(formData: FormData) {
+  const session = await verifySession();
+
+  const validated = GroupNameSchema.safeParse({ name: formData.get("name") });
+  if (!validated.success) {
+    throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
+  }
+
+  const supabase = await createClient();
+
+  // Choosing the id ourselves (instead of insert().select()) sidesteps a
+  // Postgres RLS quirk: on INSERT ... RETURNING, the returned row is also
+  // checked against the SELECT policy (groups_select_member, which needs a
+  // group_members row). The handle_new_group trigger only creates that
+  // membership row after the insert, so relying on RETURNING here raised
+  // "new row violates row-level security policy" even though the insert
+  // itself was allowed.
+  const id = randomUUID();
+  const { error } = await supabase
+    .from("groups")
+    .insert({ id, name: validated.data.name, created_by: session.userId });
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/groups");
+  redirect(`/groups/${id}`);
+}
+
+export async function deleteGroup(groupId: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  // RLS (groups_delete_admin) ensures only an admin can do this. Cascades
+  // through group_members and any group-scoped todos via existing FKs.
+  const { error } = await supabase.from("groups").delete().eq("id", groupId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/groups");
+  redirect("/groups");
+}
+
+export async function removeMember(groupId: string, userId: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/groups/${groupId}`);
+}
+
+export async function leaveGroup(groupId: string) {
+  const session = await verifySession();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", session.userId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/groups");
+  redirect("/groups");
+}
+
+export async function joinGroup(token: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data: groupId, error } = await supabase.rpc("join_group_by_token", { token });
+  if (error || !groupId) {
+    throw new Error("Einladung ungültig oder abgelaufen.");
+  }
+
+  revalidatePath("/groups");
+  redirect(`/groups/${groupId}`);
+}

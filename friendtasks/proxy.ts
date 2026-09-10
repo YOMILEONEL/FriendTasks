@@ -55,13 +55,16 @@ export async function proxy(request: NextRequest) {
 
   if (!user && !publicRoute) {
     const url = request.nextUrl.clone();
+    const next = url.pathname + url.search;
     url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("next", next);
     return NextResponse.redirect(url);
   }
 
   if (user && (pathname === "/login" || pathname === "/signup")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/today";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

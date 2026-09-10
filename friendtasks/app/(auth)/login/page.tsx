@@ -2,16 +2,21 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { login } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState(login, undefined);
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
 
   return (
     <form action={action} className="space-y-4">
       <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Anmelden</h1>
+      {next && <input type="hidden" name="next" value={next} />}
       <div>
         <Label htmlFor="email">E-Mail</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" />
@@ -19,13 +24,7 @@ export default function LoginPage() {
       </div>
       <div>
         <Label htmlFor="password">Passwort</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-        />
+        <PasswordInput id="password" name="password" required autoComplete="current-password" />
         <FieldError messages={state?.errors?.password} />
       </div>
       {state?.message && (
@@ -35,7 +34,10 @@ export default function LoginPage() {
         {pending ? "Anmelden…" : "Anmelden"}
       </Button>
       <div className="flex justify-between text-sm text-zinc-500 dark:text-zinc-400">
-        <Link href="/signup" className="hover:text-zinc-900 dark:hover:text-zinc-50">
+        <Link
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
+          className="hover:text-zinc-900 dark:hover:text-zinc-50"
+        >
           Konto erstellen
         </Link>
         <Link href="/reset-password" className="hover:text-zinc-900 dark:hover:text-zinc-50">

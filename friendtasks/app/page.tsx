@@ -13,7 +13,7 @@ export default async function Home() {
   ] = await Promise.all([supabase.auth.getUser(), cookies()]);
 
   if (user) {
-    redirect("/today");
+    redirect("/dashboard");
   }
 
   const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : "light";

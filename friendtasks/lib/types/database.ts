@@ -32,6 +32,7 @@ export interface Database {
           id: string;
           name: string;
           created_by: string;
+          invite_token: string;
           created_at: string;
         };
         Insert: {
@@ -59,7 +60,15 @@ export interface Database {
         Update: {
           role?: GroupRole;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "group_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       todos: {
         Row: {
@@ -67,6 +76,8 @@ export interface Database {
           title: string;
           description: string | null;
           due_date: string | null;
+          due_time: string | null;
+          due_time_end: string | null;
           priority: Priority;
           status: TodoStatus;
           owner_id: string;
@@ -79,6 +90,8 @@ export interface Database {
           title: string;
           description?: string | null;
           due_date?: string | null;
+          due_time?: string | null;
+          due_time_end?: string | null;
           priority?: Priority;
           status?: TodoStatus;
           owner_id: string;
@@ -88,6 +101,8 @@ export interface Database {
           title?: string;
           description?: string | null;
           due_date?: string | null;
+          due_time?: string | null;
+          due_time_end?: string | null;
           priority?: Priority;
           status?: TodoStatus;
           group_id?: string | null;
@@ -173,11 +188,28 @@ export interface Database {
           todo_id?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "todo_assignees_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_group_preview: {
+        Args: { token: string };
+        Returns: { id: string; name: string; member_count: number }[];
+      };
+      join_group_by_token: {
+        Args: { token: string };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
