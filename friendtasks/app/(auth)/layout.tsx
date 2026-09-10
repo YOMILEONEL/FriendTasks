@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LogoMark } from "@/components/layout/logo";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -7,8 +8,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="w-full max-w-sm">
         <Link
           href="/"
-          className="mb-8 block text-center text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+          className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50"
         >
+          <LogoMark />
           FriendTasks
         </Link>
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">

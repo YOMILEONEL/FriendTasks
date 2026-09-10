@@ -8,6 +8,8 @@ const PUBLIC_ROUTES = [
   "/reset-password",
   "/reset-password/confirm",
   "/auth/callback",
+  "/icon",
+  "/apple-icon",
 ];
 
 function isPublicRoute(pathname: string): boolean {

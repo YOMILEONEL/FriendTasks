@@ -15,6 +15,7 @@ import {
   TodayIcon,
   UpcomingIcon,
 } from "@/components/layout/icons";
+import { LogoMark } from "@/components/layout/logo";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
@@ -34,9 +35,7 @@ function isActive(pathname: string, href: string): boolean {
 function Logo({ collapsed }: { collapsed: boolean }) {
   return (
     <Link href="/dashboard" className="flex items-center gap-2 px-4 py-5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white">
-        F
-      </span>
+      <LogoMark />
       {!collapsed && (
         <span className="min-w-0">
           <span className="block truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">

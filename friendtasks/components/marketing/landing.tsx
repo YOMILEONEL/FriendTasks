@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { LogoMark } from "@/components/layout/logo";
 import type { Theme } from "@/lib/types/database";
 
 const AUDIENCES = [
@@ -56,7 +57,10 @@ export function Landing({ theme }: { theme: Theme }) {
     <div className="flex flex-1 flex-col bg-white dark:bg-zinc-950">
       <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <span className="font-semibold text-zinc-900 dark:text-zinc-50">FriendTasks</span>
+          <span className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-50">
+            <LogoMark />
+            FriendTasks
+          </span>
           <div className="flex items-center gap-3">
             <ThemeToggle theme={theme} />
             <Link
