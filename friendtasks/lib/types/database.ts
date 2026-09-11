@@ -95,6 +95,7 @@ export interface Database {
           status: TodoStatus;
           recurrence: Recurrence | null;
           recurrence_until: string | null;
+          recurrence_weekdays: number[] | null;
           owner_id: string;
           group_id: string | null;
           list_id: string | null;
@@ -113,6 +114,7 @@ export interface Database {
           status?: TodoStatus;
           recurrence?: Recurrence | null;
           recurrence_until?: string | null;
+          recurrence_weekdays?: number[] | null;
           owner_id: string;
           group_id?: string | null;
           list_id?: string | null;
@@ -128,6 +130,7 @@ export interface Database {
           status?: TodoStatus;
           recurrence?: Recurrence | null;
           recurrence_until?: string | null;
+          recurrence_weekdays?: number[] | null;
           group_id?: string | null;
           list_id?: string | null;
           claimable?: boolean;

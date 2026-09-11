@@ -20,7 +20,10 @@ export function TodoList({
   return (
     <ul className="space-y-2">
       {todos.map((todo) => (
-        <TodoItem key={todo.id} todo={todo} allTags={allTags} groupMembers={groupMembers} />
+        // A multi-weekday recurring todo can appear more than once in the
+        // same list (one row per projected occurrence), all sharing the
+        // same real todo.id — due_date disambiguates the React key.
+        <TodoItem key={`${todo.id}-${todo.due_date ?? "none"}`} todo={todo} allTags={allTags} groupMembers={groupMembers} />
       ))}
     </ul>
   );

@@ -18,6 +18,18 @@ const PRIORITIES: { value: Priority; labelKey: DictionaryKey; className: string 
   { value: "high", labelKey: "todoForm.priorityHigh", className: "bg-red-500" },
 ];
 
+// Monday-first display order; values themselves match Date#getDay() (0 =
+// Sunday) since that's what nextRecurrenceDate expects.
+const WEEKDAY_OPTIONS: { value: number; labelKey: DictionaryKey }[] = [
+  { value: 1, labelKey: "weekday.1" },
+  { value: 2, labelKey: "weekday.2" },
+  { value: 3, labelKey: "weekday.3" },
+  { value: 4, labelKey: "weekday.4" },
+  { value: 5, labelKey: "weekday.5" },
+  { value: 6, labelKey: "weekday.6" },
+  { value: 0, labelKey: "weekday.0" },
+];
+
 export function TodoForm({
   action,
   todo,
@@ -41,6 +53,7 @@ export function TodoForm({
     | "priority"
     | "recurrence"
     | "recurrence_until"
+    | "recurrence_weekdays"
     | "claimable"
   >;
   // Id of the todo being edited, so it can be excluded from the overlap
@@ -60,7 +73,22 @@ export function TodoForm({
   const [isPending, startTransition] = useTransition();
   const [priority, setPriority] = useState<Priority>(todo?.priority ?? "medium");
   const [recurrence, setRecurrence] = useState<"none" | Recurrence>(todo?.recurrence ?? "none");
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<Set<number>>(
+    new Set(todo?.recurrence_weekdays ?? [])
+  );
   const t = useT();
+
+  function toggleWeekday(value: number) {
+    setRecurrenceWeekdays((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
+      return next;
+    });
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,6 +180,37 @@ export function TodoForm({
           <option value="monthly">{t("recurrence.monthly")}</option>
         </Select>
       </div>
+      {recurrence === "weekly" && (
+        <div>
+          <Label>{t("todoForm.recurrenceWeekdays")}</Label>
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAY_OPTIONS.map((day) => {
+              const active = recurrenceWeekdays.has(day.value);
+              return (
+                <label key={day.value}>
+                  <input
+                    type="checkbox"
+                    name="recurrenceWeekdays"
+                    value={day.value}
+                    checked={active}
+                    onChange={() => toggleWeekday(day.value)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      active
+                        ? "bg-indigo-600 text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    {t(day.labelKey)}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {recurrence !== "none" && (
         <div>
           <Label htmlFor="recurrenceUntil">{t("todoForm.recurrenceUntil")}</Label>

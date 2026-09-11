@@ -66,14 +66,24 @@ export async function createTodo(formData: FormData) {
     priority: formData.get("priority") ?? "medium",
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceUntil: formData.get("recurrenceUntil") ?? "",
+    recurrenceWeekdays: formData.getAll("recurrenceWeekdays"),
   });
 
   if (!validated.success) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
   }
 
-  const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence, recurrenceUntil } =
-    validated.data;
+  const {
+    title,
+    description,
+    dueDate,
+    dueTime,
+    dueTimeEnd,
+    priority,
+    recurrence,
+    recurrenceUntil,
+    recurrenceWeekdays,
+  } = validated.data;
   const groupId = formData.get("groupId");
   const listId = formData.get("listId");
   const claimable = formData.get("claimable") === "on";
@@ -88,6 +98,7 @@ export async function createTodo(formData: FormData) {
     priority,
     recurrence: recurrence === "none" ? null : recurrence,
     recurrence_until: recurrenceUntil || null,
+    recurrence_weekdays: recurrenceWeekdays.length > 0 ? recurrenceWeekdays : null,
     owner_id: session.userId,
     group_id: typeof groupId === "string" && groupId ? groupId : null,
     list_id: typeof listId === "string" && listId ? listId : null,
@@ -110,14 +121,24 @@ export async function updateTodo(todoId: string, formData: FormData) {
     priority: formData.get("priority") ?? "medium",
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceUntil: formData.get("recurrenceUntil") ?? "",
+    recurrenceWeekdays: formData.getAll("recurrenceWeekdays"),
   });
 
   if (!validated.success) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
   }
 
-  const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence, recurrenceUntil } =
-    validated.data;
+  const {
+    title,
+    description,
+    dueDate,
+    dueTime,
+    dueTimeEnd,
+    priority,
+    recurrence,
+    recurrenceUntil,
+    recurrenceWeekdays,
+  } = validated.data;
   const claimable = formData.get("claimable") === "on";
   const supabase = await createClient();
 
@@ -132,6 +153,7 @@ export async function updateTodo(todoId: string, formData: FormData) {
       priority,
       recurrence: recurrence === "none" ? null : recurrence,
       recurrence_until: recurrenceUntil || null,
+      recurrence_weekdays: recurrenceWeekdays.length > 0 ? recurrenceWeekdays : null,
       claimable,
     })
     .eq("id", todoId);
@@ -161,13 +183,13 @@ export async function toggleTodoStatus(todoId: string, done: boolean, occurrence
   if (done) {
     const { data: todo } = await supabase
       .from("todos")
-      .select("due_date, recurrence, recurrence_until")
+      .select("due_date, recurrence, recurrence_until, recurrence_weekdays")
       .eq("id", todoId)
       .single();
 
     if (todo?.recurrence && todo.due_date) {
       const targetDate = occurrenceDate ?? todo.due_date;
-      const next = nextRecurrenceDate(targetDate, todo.recurrence);
+      const next = nextRecurrenceDate(targetDate, todo.recurrence, todo.recurrence_weekdays);
       const seriesEnds = !!todo.recurrence_until && next > todo.recurrence_until;
 
       if (seriesEnds) {

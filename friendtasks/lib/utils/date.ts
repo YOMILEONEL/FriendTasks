@@ -21,13 +21,31 @@ export function todayISO(): string {
   return toISODate(new Date());
 }
 
-// Next occurrence for a recurring todo: weekly just adds 7 days (JS Date
-// rolls month/year boundaries automatically). Monthly keeps the same day of
-// month, clamped to the target month's last day (e.g. Jan 31 -> Feb 28/29).
-export function nextRecurrenceDate(dueDateISO: string, recurrence: "weekly" | "monthly"): string {
+// Next occurrence for a recurring todo.
+// - Weekly with no explicit weekdays: just adds 7 days (JS Date rolls
+//   month/year boundaries automatically) — repeats on due_date's own
+//   weekday, one time a week.
+// - Weekly with explicit weekdays (e.g. [1, 4] for Mon + Thu): a todo can
+//   recur more than once a week, so this finds the next weekday in that set
+//   after the current due date, wrapping to the earliest one next week if
+//   the current date is already the last matching weekday this week.
+// - Monthly keeps the same day of month, clamped to the target month's last
+//   day (e.g. Jan 31 -> Feb 28/29).
+export function nextRecurrenceDate(
+  dueDateISO: string,
+  recurrence: "weekly" | "monthly",
+  weekdays?: number[] | null
+): string {
   const [year, month, day] = dueDateISO.split("-").map(Number);
 
   if (recurrence === "weekly") {
+    if (weekdays && weekdays.length > 0) {
+      const sorted = [...new Set(weekdays)].sort((a, b) => a - b);
+      const currentWeekday = new Date(year, month - 1, day).getDay();
+      const nextThisWeek = sorted.find((weekday) => weekday > currentWeekday);
+      const delta = nextThisWeek !== undefined ? nextThisWeek - currentWeekday : 7 - currentWeekday + sorted[0];
+      return toISODate(new Date(year, month - 1, day + delta));
+    }
     return toISODate(new Date(year, month - 1, day + 7));
   }
 

@@ -97,34 +97,47 @@ async function withGroupNames(
 }
 
 // Rolls a recurring todo's due date forward (respecting its recurrence
-// interval) until it lands within [rangeStart, rangeEnd], or returns null if
-// it never falls in range (e.g. the anchor date is still in the future, or
-// the series' recurrenceUntil ends before rangeStart). Capped iteration
-// count: cheap and plenty for any date range this app actually queries (a
-// single week, or "today").
-function projectDueDate(
+// interval, including a multi-weekday weekly pattern) and collects every
+// occurrence that lands within [rangeStart, rangeEnd] — a weekly todo set to
+// repeat on e.g. Monday AND Thursday can have two occurrences in the same
+// week, not just one. Capped iteration counts: cheap and plenty for any date
+// range this app actually queries (a single week, or "today").
+function projectDueDates(
   dueDate: string,
   recurrence: Recurrence,
   rangeStart: string,
   rangeEnd: string,
-  recurrenceUntil: string | null
-): string | null {
+  recurrenceUntil: string | null,
+  recurrenceWeekdays: number[] | null
+): string[] {
   const effectiveEnd = recurrenceUntil && recurrenceUntil < rangeEnd ? recurrenceUntil : rangeEnd;
-  if (dueDate > effectiveEnd) return null;
+  if (dueDate > effectiveEnd) return [];
+
   let candidate = dueDate;
-  let iterations = 0;
-  while (candidate < rangeStart && iterations < 500) {
-    candidate = nextRecurrenceDate(candidate, recurrence);
-    iterations++;
+  let rollIterations = 0;
+  while (candidate < rangeStart && rollIterations < 500) {
+    candidate = nextRecurrenceDate(candidate, recurrence, recurrenceWeekdays);
+    rollIterations++;
   }
-  return candidate >= rangeStart && candidate <= effectiveEnd ? candidate : null;
+
+  const dates: string[] = [];
+  let collectIterations = 0;
+  while (candidate >= rangeStart && candidate <= effectiveEnd && collectIterations < 30) {
+    dates.push(candidate);
+    candidate = nextRecurrenceDate(candidate, recurrence, recurrenceWeekdays);
+    collectIterations++;
+  }
+  return dates;
 }
 
-// Recurring todos whose real due_date already fell before `rangeStart` still
-// belong in [rangeStart, rangeEnd] at their next projected occurrence — a
-// weekly todo should show up on every future week, not just once it's been
-// completed. This is purely a display projection: it returns the same todo
-// with `due_date` swapped to the projected date, no new row is created.
+// Recurring todos can have an occurrence in [rangeStart, rangeEnd] that
+// isn't the row's own due_date — either because due_date is stale (fell
+// before rangeStart, so it needs rolling forward) or because a multi-
+// weekday weekly todo recurs again later in the same range as its anchor.
+// This is purely a display projection: it returns the same todo once per
+// such occurrence, with `due_date` swapped to that date, no new row is
+// created. The occurrence matching the row's actual due_date is skipped —
+// that one is already covered by the plain "due_date in range" query.
 async function getProjectedRecurringTodos(
   supabase: SupabaseClient<Database>,
   rangeStart: string,
@@ -139,7 +152,7 @@ async function getProjectedRecurringTodos(
     .select(TODO_SELECT)
     .not("recurrence", "is", null)
     .eq("status", "open")
-    .lt("due_date", rangeStart);
+    .lte("due_date", rangeEnd);
 
   if (filters.priority && filters.priority !== "all") query = query.eq("priority", filters.priority);
   if (filters.status && filters.status !== "all" && filters.status !== "open") {
@@ -152,14 +165,18 @@ async function getProjectedRecurringTodos(
   const projected: TodoWithRelations[] = [];
   for (const todo of toTodoRows(data).map(mapTodo)) {
     if (!todo.due_date || !todo.recurrence) continue;
-    const projectedDate = projectDueDate(
+    const dates = projectDueDates(
       todo.due_date,
       todo.recurrence,
       rangeStart,
       rangeEnd,
-      todo.recurrence_until
+      todo.recurrence_until,
+      todo.recurrence_weekdays
     );
-    if (projectedDate) projected.push({ ...todo, due_date: projectedDate });
+    for (const date of dates) {
+      if (date === todo.due_date) continue;
+      projected.push({ ...todo, due_date: date });
+    }
   }
   return projected;
 }

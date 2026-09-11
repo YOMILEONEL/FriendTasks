@@ -25,16 +25,30 @@ export const TodoInputSchema = z
     priority: PrioritySchema,
     recurrence: z.enum(["none", "weekly", "monthly"]).default("none"),
     recurrenceUntil: z.string().optional().or(z.literal("")),
+    // Which weekdays a *weekly* recurrence repeats on (0 = Sunday .. 6 =
+    // Saturday), so a todo can recur more than once a week (e.g. Mon + Thu).
+    // Empty means "just due_date's own weekday", the original single-day
+    // behavior.
+    recurrenceWeekdays: z.array(z.coerce.number().int().min(0).max(6)).optional().default([]),
   })
   .transform((data) => {
     // A recurring todo needs a date to know when the next occurrence falls
     // due, so drop recurrence rather than error when there's no date.
     if (!data.dueDate) {
-      return { ...data, dueTime: "", dueTimeEnd: "", recurrence: "none" as const, recurrenceUntil: "" };
+      return {
+        ...data,
+        dueTime: "",
+        dueTimeEnd: "",
+        recurrence: "none" as const,
+        recurrenceUntil: "",
+        recurrenceWeekdays: [],
+      };
     }
     if (!data.dueTime) data = { ...data, dueTimeEnd: "" };
-    // An end date only makes sense alongside an actual recurrence.
-    if (data.recurrence === "none") return { ...data, recurrenceUntil: "" };
+    // An end date, and specific weekdays, only make sense alongside an
+    // actual recurrence — and weekdays only alongside a *weekly* one.
+    if (data.recurrence === "none") return { ...data, recurrenceUntil: "", recurrenceWeekdays: [] };
+    if (data.recurrence !== "weekly") return { ...data, recurrenceWeekdays: [] };
     return data;
   })
   .refine((data) => !data.dueTimeEnd || (!!data.dueTime && data.dueTimeEnd > data.dueTime), {
