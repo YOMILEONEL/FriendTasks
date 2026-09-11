@@ -7,10 +7,12 @@ import { TodoModal } from "@/components/calendar/todo-modal";
 import { TodoChoiceModal } from "@/components/calendar/todo-choice-modal";
 import { useLocale, useT } from "@/components/i18n/locale-provider";
 import type { TodoWithRelations } from "@/lib/types/todo";
+import type { Priority } from "@/lib/types/database";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const ROW_HEIGHT = "2.75rem";
 const GRID_TEMPLATE_COLUMNS = "64px repeat(7, minmax(0, 1fr))";
+const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 type ModalState =
   | { mode: "create"; date: string; time?: string }
@@ -64,7 +66,9 @@ export function WeekGrid({
 
   // Groups todos sharing the same day + start hour, so overlapping entries
   // render as one stacked chip with a chooser instead of silently hiding
-  // each other in the same grid cell.
+  // each other in the same grid cell. Within a group, the highest-priority
+  // todo sorts first — that's the one shown in the foreground (and the
+  // chooser lists the rest in the same priority order).
   const timedGroups = new Map<string, TodoWithRelations[]>();
   for (const todo of timedTodos) {
     const dayIndex = weekDays.indexOf(todo.due_date!);
@@ -74,6 +78,9 @@ export function WeekGrid({
     const list = timedGroups.get(key) ?? [];
     list.push(todo);
     timedGroups.set(key, list);
+  }
+  for (const group of timedGroups.values()) {
+    group.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
   }
 
   return (
