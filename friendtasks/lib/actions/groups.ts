@@ -81,11 +81,61 @@ export async function joinGroup(token: string) {
   await verifySession();
   const supabase = await createClient();
 
-  const { data: groupId, error } = await supabase.rpc("join_group_by_token", { token });
-  if (error || !groupId) {
+  // Creates a pending join request (or no-ops if already a member) — see
+  // join_group_by_token. Redirecting back to the same join page lets it
+  // re-fetch the preview and show "request sent" instead of assuming
+  // membership, since the requester isn't actually in yet.
+  const { error } = await supabase.rpc("join_group_by_token", { token });
+  if (error) {
     throw new Error("Einladung ungültig oder abgelaufen.");
   }
 
-  revalidatePath("/groups");
-  redirect(`/groups/${groupId}`);
+  revalidatePath(`/groups/join/${token}`);
+  redirect(`/groups/join/${token}`);
+}
+
+export async function approveGroupJoinRequest(requestId: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data: request, error: fetchError } = await supabase
+    .from("group_join_requests")
+    .select("group_id, user_id")
+    .eq("id", requestId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const { error: memberError } = await supabase
+    .from("group_members")
+    .insert({ group_id: request.group_id, user_id: request.user_id, role: "member" });
+  if (memberError) throw new Error(memberError.message);
+
+  // Triggers the "join_approved" notification to the requester.
+  const { error: statusError } = await supabase
+    .from("group_join_requests")
+    .update({ status: "approved", decided_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (statusError) throw new Error(statusError.message);
+
+  revalidatePath(`/groups/${request.group_id}`);
+}
+
+export async function declineGroupJoinRequest(requestId: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data: request, error: fetchError } = await supabase
+    .from("group_join_requests")
+    .select("group_id")
+    .eq("id", requestId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const { error } = await supabase
+    .from("group_join_requests")
+    .update({ status: "declined", decided_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/groups/${request.group_id}`);
 }

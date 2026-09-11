@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { verifySession } from "@/lib/data/dal";
-import type { Group, GroupPreview, GroupWithMembers } from "@/lib/types/group";
+import type { Group, GroupJoinRequest, GroupPreview, GroupWithMembers } from "@/lib/types/group";
 
 export async function getUserGroups(): Promise<Group[]> {
   await verifySession();
@@ -58,4 +58,30 @@ export async function getGroupPreview(token: string): Promise<GroupPreview | nul
   const { data, error } = await supabase.rpc("get_group_preview", { token });
   if (error) throw new Error(error.message);
   return data?.[0] ?? null;
+}
+
+// RLS (group_join_requests_select) already limits this to admins of the
+// group (or the requester's own row); the group page only fetches it for
+// admins to begin with, so a regular member never even queries this.
+export async function getGroupJoinRequests(groupId: string): Promise<GroupJoinRequest[]> {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("group_join_requests")
+    .select("id, user_id, status, created_at, profiles(display_name, avatar_url, color)")
+    .eq("group_id", groupId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    status: row.status,
+    created_at: row.created_at,
+    display_name: row.profiles?.display_name ?? "Unbekannt",
+    avatar_url: row.profiles?.avatar_url ?? null,
+    color: row.profiles?.color ?? "#6366f1",
+  }));
 }

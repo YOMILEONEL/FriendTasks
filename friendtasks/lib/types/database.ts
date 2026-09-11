@@ -3,7 +3,7 @@ export type TodoStatus = "open" | "done";
 export type GroupRole = "admin" | "member";
 export type Theme = "light" | "dark";
 export type Recurrence = "weekly" | "monthly";
-export type NotificationType = "assigned" | "comment";
+export type NotificationType = "assigned" | "comment" | "join_request" | "join_approved";
 export type ActivityAction =
   | "todo_created"
   | "todo_completed"
@@ -12,6 +12,8 @@ export type ActivityAction =
   | "member_left"
   | "list_created"
   | "list_deleted";
+export type JoinRequestStatus = "pending" | "approved" | "declined";
+export type MyJoinStatus = "member" | "pending" | "declined" | "none";
 
 export interface Database {
   public: {
@@ -242,6 +244,64 @@ export interface Database {
           }
         ];
       };
+      group_join_requests: {
+        Row: {
+          id: string;
+          group_id: string;
+          user_id: string;
+          status: JoinRequestStatus;
+          created_at: string;
+          decided_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          user_id: string;
+          status?: JoinRequestStatus;
+        };
+        Update: {
+          status?: JoinRequestStatus;
+          decided_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "group_join_requests_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      list_join_requests: {
+        Row: {
+          id: string;
+          list_id: string;
+          user_id: string;
+          status: JoinRequestStatus;
+          created_at: string;
+          decided_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          list_id: string;
+          user_id: string;
+          status?: JoinRequestStatus;
+        };
+        Update: {
+          status?: JoinRequestStatus;
+          decided_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "list_join_requests_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       todo_comments: {
         Row: {
           id: string;
@@ -412,7 +472,7 @@ export interface Database {
     Functions: {
       get_group_preview: {
         Args: { token: string };
-        Returns: { id: string; name: string; member_count: number }[];
+        Returns: { id: string; name: string; member_count: number; my_status: MyJoinStatus }[];
       };
       join_group_by_token: {
         Args: { token: string };
@@ -420,7 +480,7 @@ export interface Database {
       };
       get_list_preview: {
         Args: { token: string };
-        Returns: { id: string; name: string; member_count: number }[];
+        Returns: { id: string; name: string; member_count: number; my_status: MyJoinStatus }[];
       };
       join_list_by_token: {
         Args: { token: string };

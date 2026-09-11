@@ -21,16 +21,24 @@ export function TodoItem({
   todo,
   allTags,
   groupMembers,
+  currentUserId,
 }: {
   todo: TodoWithRelations;
   allTags: Tag[];
   groupMembers?: GroupMember[];
+  currentUserId: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const t = useT();
   const locale = useLocale();
+
+  // A friend invited to a personal list can view it but not create, edit,
+  // delete or check off its todos — only the list owner can write. Group
+  // sub-list todos (group_id set alongside list_id) are unaffected: those
+  // stay fully editable by any group member.
+  const readOnly = todo.list_id !== null && todo.group_id === null && todo.owner_id !== currentUserId;
 
   const done = todo.status === "done";
   const dueDate = formatDueDate(todo.due_date, locale);
@@ -70,7 +78,7 @@ export function TodoItem({
       <div className="flex items-start gap-3">
         <Checkbox
           checked={done}
-          disabled={isPending}
+          disabled={isPending || readOnly}
           onChange={(e) => handleToggle(e.target.checked)}
           className="mt-0.5"
         />
@@ -147,30 +155,32 @@ export function TodoItem({
             )}
           </div>
         </button>
-        <div className="flex gap-1">
-          {todo.claimable && todo.assignees.length === 0 && groupMembers && groupMembers.length > 0 && (
-            <Button
-              variant="ghost"
-              className="px-2 py-1 text-xs text-indigo-600"
-              onClick={handleClaim}
-              disabled={isPending}
-            >
-              {t("todo.claim")}
+        {!readOnly && (
+          <div className="flex gap-1">
+            {todo.claimable && todo.assignees.length === 0 && groupMembers && groupMembers.length > 0 && (
+              <Button
+                variant="ghost"
+                className="px-2 py-1 text-xs text-indigo-600"
+                onClick={handleClaim}
+                disabled={isPending}
+              >
+                {t("todo.claim")}
+              </Button>
+            )}
+            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleDuplicate} disabled={isPending}>
+              {t("todo.duplicate")}
             </Button>
-          )}
-          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleDuplicate} disabled={isPending}>
-            {t("todo.duplicate")}
-          </Button>
-          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditing((v) => !v)}>
-            {editing ? t("common.close") : t("common.edit")}
-          </Button>
-          <Button variant="ghost" className="px-2 py-1 text-xs text-red-600" onClick={handleDelete}>
-            {t("common.delete")}
-          </Button>
-        </div>
+            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditing((v) => !v)}>
+              {editing ? t("common.close") : t("common.edit")}
+            </Button>
+            <Button variant="ghost" className="px-2 py-1 text-xs text-red-600" onClick={handleDelete}>
+              {t("common.delete")}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {editing && (
+      {editing && !readOnly && (
         <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <TodoForm
             todo={todo}
@@ -190,14 +200,35 @@ export function TodoItem({
               {todo.description}
             </p>
           )}
-          <SubtaskList todoId={todo.id} subtasks={todo.subtasks} />
-          <div className="mt-3">
-            <TagPicker
-              todoId={todo.id}
-              allTags={allTags}
-              selectedTagIds={todo.tags.map((t) => t.id)}
-            />
-          </div>
+          {readOnly ? (
+            <div className="mt-2 space-y-1.5 pl-6">
+              {todo.subtasks.map((subtask) => (
+                <div key={subtask.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={subtask.is_done} disabled className="opacity-60" />
+                  <span
+                    className={
+                      subtask.is_done
+                        ? "text-zinc-400 line-through dark:text-zinc-600"
+                        : "text-zinc-700 dark:text-zinc-300"
+                    }
+                  >
+                    {subtask.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <SubtaskList todoId={todo.id} subtasks={todo.subtasks} />
+          )}
+          {!readOnly && (
+            <div className="mt-3">
+              <TagPicker
+                todoId={todo.id}
+                allTags={allTags}
+                selectedTagIds={todo.tags.map((t) => t.id)}
+              />
+            </div>
+          )}
           {groupMembers && groupMembers.length > 0 && (
             <div className="mt-3">
               <p className="mb-1 text-xs text-zinc-400 dark:text-zinc-500">{t("todo.assignedTo")}</p>

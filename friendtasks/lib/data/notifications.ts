@@ -1,10 +1,11 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { verifySession } from "@/lib/data/dal";
+import type { NotificationType } from "@/lib/types/database";
 
 export interface NotificationView {
   id: string;
-  type: "assigned" | "comment";
+  type: NotificationType;
   message: string | null;
   actor_name: string;
   group_id: string | null;

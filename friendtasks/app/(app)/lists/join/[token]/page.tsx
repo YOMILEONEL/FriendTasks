@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getListPreview } from "@/lib/data/lists";
 import { joinList } from "@/lib/actions/lists";
 import { getDictionary } from "@/lib/i18n/server";
@@ -29,9 +30,26 @@ export default async function JoinListPage({
           ? t["lists.accessCountOne"]
           : format(t["lists.accessCountMany"], { count: preview.member_count })}
       </p>
-      <form action={joinList.bind(null, token)}>
-        <Button type="submit">{t["common.join"]}</Button>
-      </form>
+
+      {preview.my_status === "member" ? (
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">{t["shared.alreadyMember"]}</p>
+          <Link href={`/lists/${preview.id}`}>
+            <Button type="button">{t["shared.goToList"]}</Button>
+          </Link>
+        </div>
+      ) : preview.my_status === "pending" ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{t["shared.requestSent"]}</p>
+      ) : (
+        <div className="space-y-2">
+          {preview.my_status === "declined" && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{t["shared.requestDeclined"]}</p>
+          )}
+          <form action={joinList.bind(null, token)}>
+            <Button type="submit">{t["common.requestJoin"]}</Button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

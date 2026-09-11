@@ -95,11 +95,61 @@ export async function joinList(token: string) {
   await verifySession();
   const supabase = await createClient();
 
-  const { data: listId, error } = await supabase.rpc("join_list_by_token", { token });
-  if (error || !listId) {
+  // Creates a pending join request (or no-ops if already a member/owner) —
+  // see join_list_by_token. Redirecting back to the same join page lets it
+  // re-fetch the preview and show "request sent" instead of assuming
+  // membership, since the requester isn't actually in yet.
+  const { error } = await supabase.rpc("join_list_by_token", { token });
+  if (error) {
     throw new Error("Einladung ungültig oder abgelaufen.");
   }
 
-  revalidatePath("/lists");
-  redirect(`/lists/${listId}`);
+  revalidatePath(`/lists/join/${token}`);
+  redirect(`/lists/join/${token}`);
+}
+
+export async function approveListJoinRequest(requestId: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data: request, error: fetchError } = await supabase
+    .from("list_join_requests")
+    .select("list_id, user_id")
+    .eq("id", requestId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const { error: memberError } = await supabase
+    .from("list_members")
+    .insert({ list_id: request.list_id, user_id: request.user_id });
+  if (memberError) throw new Error(memberError.message);
+
+  // Triggers the "join_approved" notification to the requester.
+  const { error: statusError } = await supabase
+    .from("list_join_requests")
+    .update({ status: "approved", decided_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (statusError) throw new Error(statusError.message);
+
+  revalidatePath(`/lists/${request.list_id}`);
+}
+
+export async function declineListJoinRequest(requestId: string) {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data: request, error: fetchError } = await supabase
+    .from("list_join_requests")
+    .select("list_id")
+    .eq("id", requestId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const { error } = await supabase
+    .from("list_join_requests")
+    .update({ status: "declined", decided_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/lists/${request.list_id}`);
 }

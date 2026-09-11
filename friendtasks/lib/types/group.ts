@@ -1,4 +1,4 @@
-import type { Database, GroupRole } from "@/lib/types/database";
+import type { Database, GroupRole, JoinRequestStatus, MyJoinStatus } from "@/lib/types/database";
 
 export type Group = Database["public"]["Tables"]["groups"]["Row"];
 
@@ -19,4 +19,15 @@ export interface GroupPreview {
   id: string;
   name: string;
   member_count: number;
+  my_status: MyJoinStatus;
+}
+
+export interface GroupJoinRequest {
+  id: string;
+  user_id: string;
+  status: JoinRequestStatus;
+  created_at: string;
+  display_name: string;
+  avatar_url: string | null;
+  color: string;
 }

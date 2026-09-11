@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { verifySession } from "@/lib/data/dal";
-import type { List, ListPreview, ListWithMembers } from "@/lib/types/list";
+import type { List, ListJoinRequest, ListPreview, ListWithMembers } from "@/lib/types/list";
 
 // Personal lists the caller owns or was invited to (RLS/lists_select already
 // scopes this correctly); group_id is null filters out group sub-lists,
@@ -91,4 +91,29 @@ export async function getListPreview(token: string): Promise<ListPreview | null>
   const { data, error } = await supabase.rpc("get_list_preview", { token });
   if (error) throw new Error(error.message);
   return data?.[0] ?? null;
+}
+
+// RLS (list_join_requests_select) already limits this to the list's owner
+// (or the requester's own row); only the owner's page ever fetches it.
+export async function getListJoinRequests(listId: string): Promise<ListJoinRequest[]> {
+  await verifySession();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("list_join_requests")
+    .select("id, user_id, status, created_at, profiles(display_name, avatar_url, color)")
+    .eq("list_id", listId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    status: row.status,
+    created_at: row.created_at,
+    display_name: row.profiles?.display_name ?? "Unbekannt",
+    avatar_url: row.profiles?.avatar_url ?? null,
+    color: row.profiles?.color ?? "#6366f1",
+  }));
 }

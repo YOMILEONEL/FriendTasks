@@ -9,11 +9,12 @@ import { BellIcon } from "@/components/layout/icons";
 import { useT } from "@/components/i18n/locale-provider";
 import { format } from "@/lib/i18n/format";
 import type { NotificationView } from "@/lib/data/notifications";
+import type { NotificationType } from "@/lib/types/database";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 
 interface Bundle {
   key: string;
-  type: "assigned" | "comment";
+  type: NotificationType;
   count: number;
   actorNames: string[];
   latest: NotificationView;
@@ -21,13 +22,19 @@ interface Bundle {
   hasUnread: boolean;
 }
 
-// Collapses repeated notifications about the same todo into one line (FR-34),
-// e.g. 3 separate "comment" rows for the same todo become one "3 neue
-// Kommentare" entry instead of 3 separate alerts.
+// Collapses repeated notifications about the same todo (or, for join
+// requests, the same group/list) into one line (FR-34), e.g. 3 separate
+// "comment" rows for the same todo become one "3 neue Kommentare" entry
+// instead of 3 separate alerts.
+function bundleKey(n: NotificationView): string {
+  if (n.type === "join_request") return `${n.type}:${n.group_id ?? n.list_id ?? n.id}`;
+  return `${n.type}:${n.todo_id ?? n.id}`;
+}
+
 function bundle(notifications: NotificationView[]): Bundle[] {
   const map = new Map<string, Bundle>();
   for (const n of notifications) {
-    const key = `${n.type}:${n.todo_id ?? n.id}`;
+    const key = bundleKey(n);
     const existing = map.get(key);
     if (existing) {
       existing.count += 1;
@@ -61,6 +68,14 @@ function bundleLabel(b: Bundle, t: (key: DictionaryKey) => string): string {
         })
       : format(t("notifications.assignedMany"), { count: b.count });
   }
+  if (b.type === "join_request") {
+    return b.count === 1
+      ? format(t("notifications.joinRequestOne"), { actor: b.actorNames[0] })
+      : format(t("notifications.joinRequestMany"), { count: b.count });
+  }
+  if (b.type === "join_approved") {
+    return format(t("notifications.joinApproved"), { name: b.latest.message ?? "" });
+  }
   return b.count === 1
     ? format(t("notifications.commentOne"), { actor: b.actorNames[0], message: b.latest.message ?? "" })
     : format(t("notifications.commentMany"), { count: b.count });
@@ -70,6 +85,41 @@ function bundleHref(b: Bundle): string {
   if (b.latest.group_id) return `/groups/${b.latest.group_id}`;
   if (b.latest.list_id) return `/lists/${b.latest.list_id}`;
   return "/all";
+}
+
+// A short two-tone chime for a freshly arrived notification, synthesized
+// with the Web Audio API so no audio asset needs to ship with the app.
+// Wrapped defensively: browsers can refuse audio before any user gesture
+// has happened on the page, and that's fine — the notification still
+// arrives, it just arrives silently.
+function playNotificationSound() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    [880, 1318.5].forEach((frequency, i) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      const start = now + i * 0.09;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.25);
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start(start);
+      oscillator.stop(start + 0.25);
+    });
+
+    setTimeout(() => ctx.close(), 500);
+  } catch {
+    // No Web Audio support or autoplay blocked — skip the sound.
+  }
 }
 
 export function NotificationBell({
@@ -93,6 +143,7 @@ export function NotificationBell({
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         (payload) => {
           setNotifications((prev) => [payload.new as NotificationView, ...prev].slice(0, 30));
+          playNotificationSound();
           router.refresh();
         }
       )

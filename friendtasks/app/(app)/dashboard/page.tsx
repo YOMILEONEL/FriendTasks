@@ -55,7 +55,7 @@ export default async function DashboardPage() {
 
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["nav.today"]}</h2>
-        <TodoList todos={todayTodos} allTags={tags} emptyMessage={t["page.today.empty"]} />
+        <TodoList todos={todayTodos} allTags={tags} currentUserId={profile.id} emptyMessage={t["page.today.empty"]} />
       </div>
     </div>
   );

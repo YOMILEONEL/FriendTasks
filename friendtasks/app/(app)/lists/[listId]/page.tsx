@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import { verifySession } from "@/lib/data/dal";
-import { getList } from "@/lib/data/lists";
+import { getList, getListJoinRequests } from "@/lib/data/lists";
 import { getListTodos, getUserTags } from "@/lib/data/todos";
 import { getListNotes } from "@/lib/data/notes";
 import { saveListNotes } from "@/lib/actions/notes";
+import { approveListJoinRequest, declineListJoinRequest } from "@/lib/actions/lists";
 import { getDictionary } from "@/lib/i18n/server";
 import { ListMemberList } from "@/components/lists/list-member-list";
 import { InviteLink } from "@/components/groups/invite-link";
+import { JoinRequests } from "@/components/shared/join-requests";
 import { NewTodo } from "@/components/todo/new-todo";
 import { QuickAdd } from "@/components/todo/quick-add";
 import { TodoList } from "@/components/todo/todo-list";
@@ -37,6 +39,7 @@ export default async function ListDetailPage({
   ]);
 
   const isOwner = list.owner_id === session.userId;
+  const joinRequests = isOwner ? await getListJoinRequests(listId) : [];
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -60,6 +63,17 @@ export default async function ListDetailPage({
         </div>
       )}
 
+      {isOwner && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.joinRequests"]}</h2>
+          <JoinRequests
+            requests={joinRequests}
+            onApprove={approveListJoinRequest}
+            onDecline={declineListJoinRequest}
+          />
+        </div>
+      )}
+
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.notes"]}</h2>
         <NotesEditor initialContent={notes} onSave={saveListNotes.bind(null, listId)} />
@@ -67,14 +81,21 @@ export default async function ListDetailPage({
 
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.todos"]}</h2>
-        <QuickAdd
-          tags={tags}
-          members={list.members.map((m) => ({ user_id: m.user_id, display_name: m.display_name }))}
-          listId={listId}
-        />
-        <NewTodo listId={listId} />
+        {isOwner && (
+          <QuickAdd
+            tags={tags}
+            members={list.members.map((m) => ({ user_id: m.user_id, display_name: m.display_name }))}
+            listId={listId}
+          />
+        )}
+        {isOwner && <NewTodo listId={listId} />}
         <TodoFilterBar basePath={`/lists/${listId}`} tags={tags} />
-        <TodoList todos={todos} allTags={tags} emptyMessage={t["shared.noListTodos"]} />
+        <TodoList
+          todos={todos}
+          allTags={tags}
+          currentUserId={session.userId}
+          emptyMessage={t["shared.noListTodos"]}
+        />
       </div>
 
       {isOwner && (

@@ -1,16 +1,18 @@
 import { notFound } from "next/navigation";
 import { verifySession } from "@/lib/data/dal";
-import { getGroup } from "@/lib/data/groups";
+import { getGroup, getGroupJoinRequests } from "@/lib/data/groups";
 import { getGroupLists } from "@/lib/data/lists";
 import { getGroupTodos, getUserTags } from "@/lib/data/todos";
 import { getGroupActivity } from "@/lib/data/activity";
 import { getGroupNotes } from "@/lib/data/notes";
 import { createGroupList } from "@/lib/actions/lists";
+import { approveGroupJoinRequest, declineGroupJoinRequest } from "@/lib/actions/groups";
 import { saveGroupNotes } from "@/lib/actions/notes";
 import { getDictionary } from "@/lib/i18n/server";
 import { MemberList } from "@/components/groups/member-list";
 import { InviteLink } from "@/components/groups/invite-link";
 import { ActivityFeed } from "@/components/groups/activity-feed";
+import { JoinRequests } from "@/components/shared/join-requests";
 import { NewTodo } from "@/components/todo/new-todo";
 import { QuickAdd } from "@/components/todo/quick-add";
 import { TodoList } from "@/components/todo/todo-list";
@@ -47,6 +49,7 @@ export default async function GroupDetailPage({
 
   const currentMember = group.members.find((m) => m.user_id === session.userId);
   const isAdmin = currentMember?.role === "admin";
+  const joinRequests = isAdmin ? await getGroupJoinRequests(groupId) : [];
 
   const unlistedTodos = todos.filter((t) => !t.list_id);
   const todosByListId = new Map(lists.map((l) => [l.id, todos.filter((t) => t.list_id === l.id)]));
@@ -72,6 +75,17 @@ export default async function GroupDetailPage({
         </div>
       )}
 
+      {isAdmin && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.joinRequests"]}</h2>
+          <JoinRequests
+            requests={joinRequests}
+            onApprove={approveGroupJoinRequest}
+            onDecline={declineGroupJoinRequest}
+          />
+        </div>
+      )}
+
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.notes"]}</h2>
         <NotesEditor initialContent={notes} onSave={saveGroupNotes.bind(null, groupId)} />
@@ -91,6 +105,7 @@ export default async function GroupDetailPage({
           todos={unlistedTodos}
           allTags={tags}
           groupMembers={group.members}
+          currentUserId={session.userId}
           emptyMessage={t["groups.noUnlistedTodos"]}
         />
       </div>
@@ -111,6 +126,7 @@ export default async function GroupDetailPage({
               todos={todosByListId.get(list.id) ?? []}
               allTags={tags}
               groupMembers={group.members}
+              currentUserId={session.userId}
               emptyMessage={t["shared.noListTodos"]}
             />
           </div>
