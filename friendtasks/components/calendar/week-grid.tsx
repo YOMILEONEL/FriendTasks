@@ -30,6 +30,59 @@ function timeToLine(time: string, roundUp: boolean): number {
   return hour + 1 + (roundUp && minute > 0 ? 1 : 0);
 }
 
+interface Segment {
+  startLine: number;
+  endLine: number;
+  todos: TodoWithRelations[];
+}
+
+// Splits one day's timed todos into a true partition of the hour grid: a
+// stretch covered by only one todo is its own segment (clicking it opens
+// that todo directly); a stretch where two or more todos' time ranges
+// actually overlap becomes its own segment showing a "+N" chooser — only
+// there, not across each todo's whole span. Adjacent stretches covered by
+// the exact same set of todos are merged into one segment so a plain,
+// non-overlapping todo still renders as a single continuous block.
+function computeDaySegments(dayTodos: TodoWithRelations[]): Segment[] {
+  const withLines = dayTodos.map((todo) => {
+    const startLine = timeToLine(todo.due_time!, false);
+    const endLine = todo.due_time_end
+      ? Math.max(timeToLine(todo.due_time_end, true), startLine + 1)
+      : startLine + 1;
+    return { todo, startLine, endLine };
+  });
+
+  const boundaries = [...new Set(withLines.flatMap((t) => [t.startLine, t.endLine]))].sort((a, b) => a - b);
+
+  const raw: Segment[] = [];
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const segStart = boundaries[i];
+    const segEnd = boundaries[i + 1];
+    const covering = withLines
+      .filter((t) => t.startLine <= segStart && t.endLine >= segEnd)
+      .map((t) => t.todo)
+      .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    if (covering.length === 0) continue;
+    raw.push({ startLine: segStart, endLine: segEnd, todos: covering });
+  }
+
+  const merged: Segment[] = [];
+  for (const seg of raw) {
+    const last = merged[merged.length - 1];
+    const sameCoverage =
+      last &&
+      last.endLine === seg.startLine &&
+      last.todos.length === seg.todos.length &&
+      last.todos.every((todo, i) => todo.id === seg.todos[i].id);
+    if (sameCoverage) {
+      last.endLine = seg.endLine;
+    } else {
+      merged.push(seg);
+    }
+  }
+  return merged;
+}
+
 export function WeekGrid({
   weekDays,
   todos,
@@ -64,23 +117,16 @@ export function WeekGrid({
     setModal({ mode: "edit", todo });
   }
 
-  // Groups todos sharing the same day + start hour, so overlapping entries
-  // render as one stacked chip with a chooser instead of silently hiding
-  // each other in the same grid cell. Within a group, the highest-priority
-  // todo sorts first — that's the one shown in the foreground (and the
-  // chooser lists the rest in the same priority order).
-  const timedGroups = new Map<string, TodoWithRelations[]>();
-  for (const todo of timedTodos) {
-    const dayIndex = weekDays.indexOf(todo.due_date!);
-    if (dayIndex === -1) continue;
-    const startLine = timeToLine(todo.due_time!, false);
-    const key = `${dayIndex}-${startLine}`;
-    const list = timedGroups.get(key) ?? [];
-    list.push(todo);
-    timedGroups.set(key, list);
-  }
-  for (const group of timedGroups.values()) {
-    group.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+  // Partition each day's timed todos into segments: a stretch of time
+  // covered by exactly one todo opens that todo directly on click, a
+  // stretch where two or more genuinely overlap shows a "+N" chooser
+  // instead — and only for that overlapping stretch, not each todo's full
+  // span. See computeDaySegments.
+  const segmentsByDay = new Map<number, Segment[]>();
+  for (const dateISO of weekDays) {
+    const dayIndex = weekDays.indexOf(dateISO);
+    const dayTodos = timedTodos.filter((todo) => todo.due_date === dateISO);
+    if (dayTodos.length > 0) segmentsByDay.set(dayIndex, computeDaySegments(dayTodos));
   }
 
   return (
@@ -181,41 +227,34 @@ export function WeekGrid({
                 ))
               )}
 
-              {[...timedGroups.entries()].map(([key, group]) => {
-                const [dayIndexStr, startLineStr] = key.split("-");
-                const dayIndex = Number(dayIndexStr);
-                const startLine = Number(startLineStr);
-                const endLine = Math.max(
-                  ...group.map((todo) =>
-                    todo.due_time_end
-                      ? Math.max(timeToLine(todo.due_time_end, true), startLine + 1)
-                      : startLine + 1
-                  )
-                );
-                const primary = group[0];
-
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() =>
-                      group.length > 1 ? setModal({ mode: "choose", todos: group }) : openEdit(primary)
-                    }
-                    className="relative z-10 m-px text-left"
-                    style={{
-                      gridColumn: dayIndex + 2,
-                      gridRow: `${startLine} / ${Math.min(endLine, 25)}`,
-                    }}
-                  >
-                    <TodoChip todo={primary} />
-                    {group.length > 1 && (
-                      <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-900 px-1 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
-                        +{group.length - 1}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {[...segmentsByDay.entries()].flatMap(([dayIndex, segments]) =>
+                segments.map((segment) => {
+                  const primary = segment.todos[0];
+                  return (
+                    <button
+                      key={`${dayIndex}-${segment.startLine}-${segment.endLine}`}
+                      type="button"
+                      onClick={() =>
+                        segment.todos.length > 1
+                          ? setModal({ mode: "choose", todos: segment.todos })
+                          : openEdit(primary)
+                      }
+                      className="relative z-10 m-px text-left"
+                      style={{
+                        gridColumn: dayIndex + 2,
+                        gridRow: `${segment.startLine} / ${Math.min(segment.endLine, 25)}`,
+                      }}
+                    >
+                      <TodoChip todo={primary} />
+                      {segment.todos.length > 1 && (
+                        <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-900 px-1 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
+                          +{segment.todos.length - 1}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
