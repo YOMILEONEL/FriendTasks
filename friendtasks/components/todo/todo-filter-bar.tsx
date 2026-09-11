@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Tag } from "@/lib/types/todo";
 
 export function TodoFilterBar({
@@ -19,6 +20,7 @@ export function TodoFilterBar({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const t = useT();
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -41,11 +43,11 @@ export function TodoFilterBar({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Suchen…"
+          placeholder={t("filter.searchPlaceholder")}
           className="min-w-0 flex-1"
         />
         <Button type="submit" variant="secondary" className="shrink-0">
-          Suchen
+          {t("filter.search")}
         </Button>
       </form>
       <div className="flex flex-wrap gap-2">
@@ -54,19 +56,19 @@ export function TodoFilterBar({
           onChange={(e) => updateParam("status", e.target.value)}
           className="w-auto"
         >
-          <option value="all">Alle Status</option>
-          <option value="open">Offen</option>
-          <option value="done">Erledigt</option>
+          <option value="all">{t("filter.allStatus")}</option>
+          <option value="open">{t("filter.open")}</option>
+          <option value="done">{t("filter.done")}</option>
         </Select>
         <Select
           defaultValue={searchParams.get("priority") ?? "all"}
           onChange={(e) => updateParam("priority", e.target.value)}
           className="w-auto"
         >
-          <option value="all">Alle Prioritäten</option>
-          <option value="low">Niedrig</option>
-          <option value="medium">Mittel</option>
-          <option value="high">Hoch</option>
+          <option value="all">{t("filter.allPriorities")}</option>
+          <option value="low">{t("todoForm.priorityLow")}</option>
+          <option value="medium">{t("todoForm.priorityMedium")}</option>
+          <option value="high">{t("todoForm.priorityHigh")}</option>
         </Select>
         {showSort && (
           <Select
@@ -74,9 +76,9 @@ export function TodoFilterBar({
             onChange={(e) => updateParam("sort", e.target.value)}
             className="w-auto"
           >
-            <option value="created_at">Neueste zuerst</option>
-            <option value="due_date">Fälligkeit</option>
-            <option value="priority">Priorität</option>
+            <option value="created_at">{t("filter.sortNewest")}</option>
+            <option value="due_date">{t("filter.sortDueDate")}</option>
+            <option value="priority">{t("filter.sortPriority")}</option>
           </Select>
         )}
         {tags.length > 0 && (
@@ -85,7 +87,7 @@ export function TodoFilterBar({
             onChange={(e) => updateParam("tagId", e.target.value)}
             className="w-auto"
           >
-            <option value="all">Alle Tags</option>
+            <option value="all">{t("filter.allTags")}</option>
             {tags.map((tag) => (
               <option key={tag.id} value={tag.id}>
                 {tag.name}

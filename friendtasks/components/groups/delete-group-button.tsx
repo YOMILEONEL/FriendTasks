@@ -3,16 +3,15 @@
 import { useTransition } from "react";
 import { deleteGroup } from "@/lib/actions/groups";
 import { Button } from "@/components/ui/button";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 
 export function DeleteGroupButton({ groupId, groupName }: { groupId: string; groupName: string }) {
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function handleDelete() {
-    if (
-      !confirm(
-        `Gruppe „${groupName}" wirklich löschen? Alle Todos dieser Gruppe werden unwiderruflich mitgelöscht.`
-      )
-    ) {
+    if (!confirm(format(t("groups.deleteConfirm"), { name: groupName }))) {
       return;
     }
     startTransition(() => {
@@ -22,7 +21,7 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
 
   return (
     <Button variant="danger" onClick={handleDelete} disabled={isPending}>
-      {isPending ? "Löscht…" : "Gruppe löschen"}
+      {isPending ? t("common.deleting") : t("groups.delete")}
     </Button>
   );
 }

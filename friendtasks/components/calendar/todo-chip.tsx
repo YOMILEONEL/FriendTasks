@@ -1,4 +1,7 @@
+"use client";
+
 import { formatTimeRange } from "@/lib/utils/date";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Priority } from "@/lib/types/database";
 import type { TodoWithRelations } from "@/lib/types/todo";
 
@@ -10,6 +13,7 @@ const PRIORITY_CLASSES: Record<Priority, string> = {
 
 export function TodoChip({ todo }: { todo: TodoWithRelations }) {
   const time = formatTimeRange(todo.due_time, todo.due_time_end);
+  const t = useT();
 
   return (
     <div
@@ -21,7 +25,7 @@ export function TodoChip({ todo }: { todo: TodoWithRelations }) {
       {time && <div className="font-medium">{time}</div>}
       <div className="truncate">
         {todo.recurrence && (
-          <span title={todo.recurrence === "weekly" ? "Wiederholt sich wöchentlich" : "Wiederholt sich monatlich"}>
+          <span title={todo.recurrence === "weekly" ? t("recurrence.weeklyTooltip") : t("recurrence.monthlyTooltip")}>
             ↻{" "}
           </span>
         )}

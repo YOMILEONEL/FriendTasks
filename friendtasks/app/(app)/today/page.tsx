@@ -1,4 +1,5 @@
 import { getTodayTodos, getUserTags } from "@/lib/data/todos";
+import { getDictionary } from "@/lib/i18n/server";
 import { NewTodo } from "@/components/todo/new-todo";
 import { QuickAdd } from "@/components/todo/quick-add";
 import { TodoList } from "@/components/todo/todo-list";
@@ -11,15 +12,15 @@ export default async function TodayPage({
   searchParams: Promise<{ status?: string; priority?: string; tagId?: string; q?: string }>;
 }) {
   const filters = (await searchParams) as TodoFilters;
-  const [todos, tags] = await Promise.all([getTodayTodos(filters), getUserTags()]);
+  const [todos, tags, t] = await Promise.all([getTodayTodos(filters), getUserTags(), getDictionary()]);
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Heute</h1>
+      <h1 className="text-xl font-semibold">{t["nav.today"]}</h1>
       <QuickAdd tags={tags} />
       <NewTodo />
       <TodoFilterBar basePath="/today" tags={tags} />
-      <TodoList todos={todos} allTags={tags} emptyMessage="Für heute steht nichts an." />
+      <TodoList todos={todos} allTags={tags} emptyMessage={t["page.today.empty"]} />
     </div>
   );
 }

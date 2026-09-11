@@ -6,6 +6,7 @@ import { refresh, revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySession } from "@/lib/data/dal";
+import { LOCALE_COOKIE, type Locale } from "@/lib/i18n/config";
 import type { FormState } from "@/lib/validation/auth";
 
 export async function updateProfile(state: FormState, formData: FormData): Promise<FormState> {
@@ -39,6 +40,16 @@ export async function updateProfile(state: FormState, formData: FormData): Promi
 export async function setTheme(theme: "light" | "dark") {
   const cookieStore = await cookies();
   cookieStore.set("theme", theme, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
+  refresh();
+}
+
+export async function setLocale(locale: Locale) {
+  const cookieStore = await cookies();
+  cookieStore.set(LOCALE_COOKIE, locale, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",

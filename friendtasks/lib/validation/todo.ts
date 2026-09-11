@@ -24,17 +24,26 @@ export const TodoInputSchema = z
       .or(z.literal("")),
     priority: PrioritySchema,
     recurrence: z.enum(["none", "weekly", "monthly"]).default("none"),
+    recurrenceUntil: z.string().optional().or(z.literal("")),
   })
   .transform((data) => {
     // A recurring todo needs a date to know when the next occurrence falls
     // due, so drop recurrence rather than error when there's no date.
-    if (!data.dueDate) return { ...data, dueTime: "", dueTimeEnd: "", recurrence: "none" as const };
-    if (!data.dueTime) return { ...data, dueTimeEnd: "" };
+    if (!data.dueDate) {
+      return { ...data, dueTime: "", dueTimeEnd: "", recurrence: "none" as const, recurrenceUntil: "" };
+    }
+    if (!data.dueTime) data = { ...data, dueTimeEnd: "" };
+    // An end date only makes sense alongside an actual recurrence.
+    if (data.recurrence === "none") return { ...data, recurrenceUntil: "" };
     return data;
   })
   .refine((data) => !data.dueTimeEnd || (!!data.dueTime && data.dueTimeEnd > data.dueTime), {
     error: "Ende muss nach dem Start liegen.",
     path: ["dueTimeEnd"],
+  })
+  .refine((data) => !data.recurrenceUntil || data.recurrenceUntil >= (data.dueDate ?? ""), {
+    error: "Das Enddatum der Wiederholung muss nach dem Fälligkeitsdatum liegen.",
+    path: ["recurrenceUntil"],
   });
 
 export const SubtaskInputSchema = z.object({

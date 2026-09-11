@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getLocale } from "@/lib/i18n/server";
 import { Landing } from "@/components/marketing/landing";
 
 export default async function Home() {
@@ -10,7 +11,8 @@ export default async function Home() {
       data: { user },
     },
     cookieStore,
-  ] = await Promise.all([supabase.auth.getUser(), cookies()]);
+    locale,
+  ] = await Promise.all([supabase.auth.getUser(), cookies(), getLocale()]);
 
   if (user) {
     redirect("/dashboard");
@@ -18,5 +20,5 @@ export default async function Home() {
 
   const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : "light";
 
-  return <Landing theme={theme} />;
+  return <Landing theme={theme} locale={locale} />;
 }

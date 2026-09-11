@@ -4,6 +4,12 @@
 // date consistently — never toISOString(), which is UTC and can disagree
 // with the browser's local <input type="date"> by a day around midnight.
 
+import type { Locale } from "@/lib/i18n/config";
+
+function intlLocale(locale: Locale): string {
+  return locale === "en" ? "en-US" : "de-DE";
+}
+
 function toISODate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -40,9 +46,9 @@ export function endOfWeekISO(): string {
   return toISODate(end);
 }
 
-export function formatDueDate(dueDate: string | null): string | null {
+export function formatDueDate(dueDate: string | null, locale: Locale = "de"): string | null {
   if (!dueDate) return null;
-  return new Date(dueDate + "T00:00:00").toLocaleDateString("de-DE", {
+  return new Date(dueDate + "T00:00:00").toLocaleDateString(intlLocale(locale), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -80,8 +86,8 @@ export function formatTimeRange(start: string | null, end: string | null): strin
   return endLabel ? `${startLabel}-${endLabel}` : startLabel;
 }
 
-export function formatDayLabel(dateISO: string): string {
-  return new Date(dateISO + "T00:00:00").toLocaleDateString("de-DE", {
+export function formatDayLabel(dateISO: string, locale: Locale = "de"): string {
+  return new Date(dateISO + "T00:00:00").toLocaleDateString(intlLocale(locale), {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -126,12 +132,12 @@ export function getWeekDays(mondayISO: string): string[] {
   return days;
 }
 
-export function formatWeekLabel(mondayISO: string): string {
+export function formatWeekLabel(mondayISO: string, locale: Locale = "de"): string {
   const days = getWeekDays(mondayISO);
   const start = new Date(days[0] + "T00:00:00");
   const end = new Date(days[6] + "T00:00:00");
-  const startLabel = start.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
-  const endLabel = end.toLocaleDateString("de-DE", {
+  const startLabel = start.toLocaleDateString(intlLocale(locale), { day: "2-digit", month: "2-digit" });
+  const endLabel = end.toLocaleDateString(intlLocale(locale), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -139,10 +145,13 @@ export function formatWeekLabel(mondayISO: string): string {
   return `${startLabel} - ${endLabel}`;
 }
 
-const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const WEEKDAY_SHORT: Record<Locale, string[]> = {
+  de: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+  en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+};
 
-export function formatDayColumnLabel(dateISO: string): string {
+export function formatDayColumnLabel(dateISO: string, locale: Locale = "de"): string {
   const date = new Date(dateISO + "T00:00:00");
-  const weekday = WEEKDAY_SHORT[(date.getDay() + 6) % 7];
+  const weekday = WEEKDAY_SHORT[locale][(date.getDay() + 6) % 7];
   return `${weekday} ${date.getDate()}`;
 }

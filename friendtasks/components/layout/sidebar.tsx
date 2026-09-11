@@ -17,17 +17,19 @@ import {
   UpcomingIcon,
 } from "@/components/layout/icons";
 import { LogoMark } from "@/components/layout/logo";
+import { useT } from "@/components/i18n/locale-provider";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 
-const LINKS = [
-  { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
-  { href: "/today", label: "Heute", icon: TodayIcon },
-  { href: "/upcoming", label: "Diese Woche", icon: UpcomingIcon },
-  { href: "/inbox", label: "Ohne Datum", icon: InboxIcon },
-  { href: "/all", label: "Alle", icon: ListIcon },
-  { href: "/calendar", label: "Kalender", icon: CalendarIcon },
-  { href: "/groups", label: "Gruppen", icon: GroupsIcon },
-  { href: "/lists", label: "Listen", icon: FolderIcon },
-  { href: "/settings", label: "Einstellungen", icon: SettingsIcon },
+const LINKS: { href: string; labelKey: DictionaryKey; icon: ComponentType<{ className?: string }> }[] = [
+  { href: "/dashboard", labelKey: "nav.dashboard", icon: DashboardIcon },
+  { href: "/today", labelKey: "nav.today", icon: TodayIcon },
+  { href: "/upcoming", labelKey: "nav.upcoming", icon: UpcomingIcon },
+  { href: "/inbox", labelKey: "nav.inbox", icon: InboxIcon },
+  { href: "/all", labelKey: "nav.all", icon: ListIcon },
+  { href: "/calendar", labelKey: "nav.calendar", icon: CalendarIcon },
+  { href: "/groups", labelKey: "nav.groups", icon: GroupsIcon },
+  { href: "/lists", labelKey: "nav.lists", icon: FolderIcon },
+  { href: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -35,17 +37,16 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 function Logo({ collapsed }: { collapsed: boolean }) {
+  const t = useT();
   return (
     <Link href="/dashboard" className="flex items-center gap-2 px-4 py-5">
       <LogoMark />
       {!collapsed && (
         <span className="min-w-0">
           <span className="block truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            FriendTasks
+            {t("nav.appName")}
           </span>
-          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
-            Todos für dich und Freunde
-          </span>
+          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{t("nav.tagline")}</span>
         </span>
       )}
     </Link>
@@ -54,18 +55,20 @@ function Logo({ collapsed }: { collapsed: boolean }) {
 
 function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <nav className="flex-1 space-y-1 overflow-y-auto px-2">
       {LINKS.map((link) => {
         const active = isActive(pathname, link.href);
-        const Icon: ComponentType<{ className?: string }> = link.icon;
+        const Icon = link.icon;
+        const label = t(link.labelKey);
         return (
           <Link
             key={link.href}
             href={link.href}
             onClick={onNavigate}
-            title={collapsed ? link.label : undefined}
+            title={collapsed ? label : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               active
                 ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400"
@@ -73,7 +76,7 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
             }`}
           >
             <Icon className="h-5 w-5 shrink-0" />
-            {!collapsed && <span className="truncate">{link.label}</span>}
+            {!collapsed && <span className="truncate">{label}</span>}
           </Link>
         );
       })}
@@ -89,6 +92,7 @@ export function Sidebar({
   onCloseMobile: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const t = useT();
 
   return (
     <>
@@ -104,7 +108,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setCollapsed((v) => !v)}
-            aria-label={collapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
+            aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
           >
             {collapsed ? <ChevronRightIcon className="h-4 w-4" /> : <ChevronLeftIcon className="h-4 w-4" />}
@@ -122,7 +126,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onCloseMobile}
-                aria-label="Menü schließen"
+                aria-label={t("nav.closeMenu")}
                 className="mr-3 text-xl leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               >
                 ×

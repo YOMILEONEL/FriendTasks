@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { LanguageToggle } from "@/components/layout/language-toggle";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { useLocale, useT } from "@/components/i18n/locale-provider";
 import type { Theme } from "@/lib/types/database";
 import type { NotificationView } from "@/lib/data/notifications";
 
@@ -20,12 +22,15 @@ export function TopBar({
   initialNotifications: NotificationView[];
   onMenuClick: () => void;
 }) {
+  const t = useT();
+  const locale = useLocale();
+
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-zinc-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8 dark:border-zinc-800 dark:bg-zinc-950/90">
       <button
         type="button"
         onClick={onMenuClick}
-        aria-label="Menü öffnen"
+        aria-label={t("nav.openMenu")}
         className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100 md:hidden dark:text-zinc-400 dark:hover:bg-zinc-900"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-5 w-5">
@@ -34,6 +39,7 @@ export function TopBar({
       </button>
       <div className="flex flex-1 items-center justify-end gap-3">
         <NotificationBell initialNotifications={initialNotifications} userId={userId} />
+        <LanguageToggle locale={locale} />
         <ThemeToggle theme={theme} />
         <Link
           href="/settings"

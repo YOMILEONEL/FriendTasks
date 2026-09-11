@@ -65,13 +65,15 @@ export async function createTodo(formData: FormData) {
     dueTimeEnd: formData.get("dueTimeEnd"),
     priority: formData.get("priority") ?? "medium",
     recurrence: formData.get("recurrence") ?? "none",
+    recurrenceUntil: formData.get("recurrenceUntil") ?? "",
   });
 
   if (!validated.success) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
   }
 
-  const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence } = validated.data;
+  const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence, recurrenceUntil } =
+    validated.data;
   const groupId = formData.get("groupId");
   const listId = formData.get("listId");
   const claimable = formData.get("claimable") === "on";
@@ -85,6 +87,7 @@ export async function createTodo(formData: FormData) {
     due_time_end: dueTimeEnd || null,
     priority,
     recurrence: recurrence === "none" ? null : recurrence,
+    recurrence_until: recurrenceUntil || null,
     owner_id: session.userId,
     group_id: typeof groupId === "string" && groupId ? groupId : null,
     list_id: typeof listId === "string" && listId ? listId : null,
@@ -106,13 +109,15 @@ export async function updateTodo(todoId: string, formData: FormData) {
     dueTimeEnd: formData.get("dueTimeEnd"),
     priority: formData.get("priority") ?? "medium",
     recurrence: formData.get("recurrence") ?? "none",
+    recurrenceUntil: formData.get("recurrenceUntil") ?? "",
   });
 
   if (!validated.success) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");
   }
 
-  const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence } = validated.data;
+  const { title, description, dueDate, dueTime, dueTimeEnd, priority, recurrence, recurrenceUntil } =
+    validated.data;
   const claimable = formData.get("claimable") === "on";
   const supabase = await createClient();
 
@@ -126,6 +131,7 @@ export async function updateTodo(todoId: string, formData: FormData) {
       due_time_end: dueTimeEnd || null,
       priority,
       recurrence: recurrence === "none" ? null : recurrence,
+      recurrence_until: recurrenceUntil || null,
       claimable,
     })
     .eq("id", todoId);
@@ -143,28 +149,65 @@ export async function deleteTodo(todoId: string) {
   revalidateTodoViews();
 }
 
-export async function toggleTodoStatus(todoId: string, done: boolean) {
+// `occurrenceDate` identifies which occurrence of a recurring todo is being
+// toggled — the calendar and Heute/Diese Woche can show either the row's
+// real due_date or a projected future date (see getProjectedRecurringTodos),
+// and callers just pass along whatever due_date they're currently rendering.
+// For a non-recurring todo it's ignored.
+export async function toggleTodoStatus(todoId: string, done: boolean, occurrenceDate?: string) {
   await verifySession();
   const supabase = await createClient();
 
-  // Completing a recurring todo advances the same row to its next
-  // occurrence instead of creating a copy — the todo shows up on every
-  // future week/month in the calendar already (see getProjectedRecurringTodos
-  // in lib/data/todos.ts), so finishing it just rolls due_date forward and
-  // reopens it rather than archiving it as done.
   if (done) {
     const { data: todo } = await supabase
       .from("todos")
-      .select("due_date, recurrence")
+      .select("due_date, recurrence, recurrence_until")
       .eq("id", todoId)
       .single();
 
     if (todo?.recurrence && todo.due_date) {
+      const targetDate = occurrenceDate ?? todo.due_date;
+      const next = nextRecurrenceDate(targetDate, todo.recurrence);
+      const seriesEnds = !!todo.recurrence_until && next > todo.recurrence_until;
+
+      if (seriesEnds) {
+        // Last occurrence of the series: the row itself becomes the
+        // permanent "done" marker for that date, same as a one-off todo.
+        const { error } = await supabase
+          .from("todos")
+          .update({ due_date: targetDate, status: "done" })
+          .eq("id", todoId);
+        if (error) throw new Error(error.message);
+        revalidateTodoViews();
+        return;
+      }
+
+      // The row advances to the next occurrence and reopens, so it no
+      // longer sits on `targetDate` — record that this occurrence was
+      // completed so the calendar can still show it there, struck through.
+      const { error: completionError } = await supabase
+        .from("todo_occurrence_completions")
+        .upsert({ todo_id: todoId, occurrence_date: targetDate }, { onConflict: "todo_id,occurrence_date" });
+      if (completionError) throw new Error(completionError.message);
+
       const { error } = await supabase
         .from("todos")
-        .update({ due_date: nextRecurrenceDate(todo.due_date, todo.recurrence), status: "open" })
+        .update({ due_date: next, status: "open" })
         .eq("id", todoId);
-
+      if (error) throw new Error(error.message);
+      revalidateTodoViews();
+      return;
+    }
+  } else if (occurrenceDate) {
+    // Unchecking a historical completed occurrence (not the row's own
+    // current due_date) just removes that log entry.
+    const { data: todo } = await supabase.from("todos").select("due_date").eq("id", todoId).single();
+    if (todo && occurrenceDate !== todo.due_date) {
+      const { error } = await supabase
+        .from("todo_occurrence_completions")
+        .delete()
+        .eq("todo_id", todoId)
+        .eq("occurrence_date", occurrenceDate);
       if (error) throw new Error(error.message);
       revalidateTodoViews();
       return;
@@ -323,6 +366,7 @@ export async function quickAddTodo(formData: FormData) {
     dueTimeEnd: "",
     priority: "medium",
     recurrence: formData.get("recurrence") ?? "none",
+    recurrenceUntil: "",
   });
   if (!validated.success) {
     throw new Error(validated.error.issues[0]?.message ?? "Ungültige Eingabe.");

@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { deleteList } from "@/lib/actions/lists";
 import { Button } from "@/components/ui/button";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 
 export function DeleteListButton({
   listId,
@@ -16,14 +18,10 @@ export function DeleteListButton({
   redirectTo?: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function handleDelete() {
-    if (
-      !confirm(
-        confirmMessage ??
-          `Liste „${listName}" wirklich löschen? Enthaltene Todos bleiben erhalten, aber ohne Liste.`
-      )
-    ) {
+    if (!confirm(confirmMessage ?? format(t("lists.deleteConfirmDefault"), { name: listName }))) {
       return;
     }
     startTransition(() => {
@@ -33,7 +31,7 @@ export function DeleteListButton({
 
   return (
     <Button variant="ghost" className="px-2 py-1 text-xs text-red-600" onClick={handleDelete} disabled={isPending}>
-      {isPending ? "Löscht…" : "Löschen"}
+      {isPending ? t("common.deleting") : t("common.delete")}
     </Button>
   );
 }

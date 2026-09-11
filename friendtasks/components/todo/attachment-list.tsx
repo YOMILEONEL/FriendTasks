@@ -8,6 +8,8 @@ import {
   type AttachmentView,
 } from "@/lib/actions/attachments";
 import { Button } from "@/components/ui/button";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 
 function formatSize(bytes: number | null): string {
   if (!bytes) return "";
@@ -20,6 +22,7 @@ export function AttachmentList({ todoId }: { todoId: string }) {
   const [attachments, setAttachments] = useState<AttachmentView[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const t = useT();
 
   function refresh() {
     startTransition(async () => {
@@ -40,13 +43,13 @@ export function AttachmentList({ todoId }: { todoId: string }) {
         formRef.current?.reset();
         refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Upload fehlgeschlagen.");
+        alert(err instanceof Error ? err.message : t("attachments.uploadFailed"));
       }
     });
   }
 
   function handleDelete(attachmentId: string, name: string) {
-    if (!confirm(`„${name}" wirklich löschen?`)) return;
+    if (!confirm(format(t("attachments.deleteConfirm"), { name }))) return;
     startTransition(async () => {
       await deleteAttachment(attachmentId);
       refresh();
@@ -55,11 +58,11 @@ export function AttachmentList({ todoId }: { todoId: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-zinc-400 dark:text-zinc-500">Anhänge</p>
+      <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("attachments.title")}</p>
       {attachments === null ? (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">Lädt…</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("common.loading")}</p>
       ) : attachments.length === 0 ? (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">Keine Anhänge.</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("attachments.empty")}</p>
       ) : (
         <ul className="space-y-1">
           {attachments.map((a) => (
@@ -83,7 +86,7 @@ export function AttachmentList({ todoId }: { todoId: string }) {
                 disabled={isPending}
                 className="shrink-0 text-xs text-zinc-500 hover:text-red-600 disabled:opacity-50"
               >
-                Löschen
+                {t("common.delete")}
               </button>
             </li>
           ))}
@@ -97,7 +100,7 @@ export function AttachmentList({ todoId }: { todoId: string }) {
           className="min-w-0 flex-1 text-xs text-zinc-600 dark:text-zinc-400"
         />
         <Button type="submit" variant="secondary" disabled={isPending} className="shrink-0 px-2 py-1 text-xs">
-          Hochladen
+          {t("common.upload")}
         </Button>
       </form>
     </div>

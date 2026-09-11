@@ -4,6 +4,8 @@ import { useRef, useTransition } from "react";
 import { createTag, deleteTag } from "@/lib/actions/tags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Tag } from "@/lib/types/todo";
 
 const COLORS = ["#71717a", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
@@ -11,9 +13,10 @@ const COLORS = ["#71717a", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"
 export function TagManager({ tags }: { tags: Tag[] }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const t = useT();
 
   function handleDelete(tagId: string, name: string) {
-    if (!confirm(`Tag „${name}" wirklich löschen? Er wird von allen Todos entfernt.`)) return;
+    if (!confirm(format(t("tags.deleteConfirm"), { name }))) return;
     startTransition(() => {
       deleteTag(tagId);
     });
@@ -33,14 +36,14 @@ export function TagManager({ tags }: { tags: Tag[] }) {
               type="button"
               onClick={() => handleDelete(tag.id, tag.name)}
               disabled={isPending}
-              aria-label={`Tag ${tag.name} löschen`}
+              aria-label={format(t("tags.deleteAria"), { name: tag.name })}
             >
               ×
             </button>
           </span>
         ))}
         {tags.length === 0 && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Noch keine Tags.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("tags.emptyShort")}</p>
         )}
       </div>
       <form
@@ -53,7 +56,7 @@ export function TagManager({ tags }: { tags: Tag[] }) {
         }}
         className="flex flex-wrap items-center gap-2"
       >
-        <Input name="name" placeholder="Neuer Tag" required className="min-w-[120px] flex-1" />
+        <Input name="name" placeholder={t("tags.newPlaceholder")} required className="min-w-[120px] flex-1" />
         <select name="color" defaultValue={COLORS[0]} className="shrink-0 rounded-md border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900">
           {COLORS.map((color) => (
             <option key={color} value={color} style={{ backgroundColor: color }}>

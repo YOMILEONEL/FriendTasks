@@ -2,6 +2,8 @@
 
 import { useTransition } from "react";
 import { leaveGroup, removeMember } from "@/lib/actions/groups";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 import type { GroupMember } from "@/lib/types/group";
 
 export function MemberList({
@@ -16,16 +18,17 @@ export function MemberList({
   isAdmin: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function handleRemove(userId: string, name: string) {
-    if (!confirm(`„${name}" wirklich aus der Gruppe entfernen?`)) return;
+    if (!confirm(format(t("groups.removeConfirm"), { name }))) return;
     startTransition(() => {
       removeMember(groupId, userId);
     });
   }
 
   function handleLeave() {
-    if (!confirm("Diese Gruppe wirklich verlassen?")) return;
+    if (!confirm(t("groups.leaveConfirm"))) return;
     startTransition(() => {
       leaveGroup(groupId);
     });
@@ -44,7 +47,7 @@ export function MemberList({
               />
               <span className="truncate">
                 {member.display_name}
-                {isSelf && " (du)"}
+                {isSelf && t("common.you")}
               </span>
             </span>
             <div className="flex shrink-0 items-center gap-2">
@@ -60,7 +63,7 @@ export function MemberList({
                   disabled={isPending}
                   className="text-xs text-zinc-500 hover:text-red-600 disabled:opacity-50"
                 >
-                  Verlassen
+                  {t("common.leave")}
                 </button>
               )}
               {isAdmin && !isSelf && (
@@ -70,7 +73,7 @@ export function MemberList({
                   disabled={isPending}
                   className="text-xs text-zinc-500 hover:text-red-600 disabled:opacity-50"
                 >
-                  Entfernen
+                  {t("common.remove")}
                 </button>
               )}
             </div>

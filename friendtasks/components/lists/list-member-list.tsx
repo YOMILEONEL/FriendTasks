@@ -2,6 +2,8 @@
 
 import { useTransition } from "react";
 import { leaveList, removeListMember } from "@/lib/actions/lists";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 import type { ListMember } from "@/lib/types/list";
 
 export function ListMemberList({
@@ -18,16 +20,17 @@ export function ListMemberList({
   isOwner: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function handleRemove(userId: string, name: string) {
-    if (!confirm(`„${name}" wirklich aus der Liste entfernen?`)) return;
+    if (!confirm(format(t("lists.removeConfirm"), { name }))) return;
     startTransition(() => {
       removeListMember(listId, userId);
     });
   }
 
   function handleLeave() {
-    if (!confirm("Diese Liste wirklich verlassen?")) return;
+    if (!confirm(t("lists.leaveConfirm"))) return;
     startTransition(() => {
       leaveList(listId);
     });
@@ -47,13 +50,13 @@ export function ListMemberList({
               />
               <span className="truncate">
                 {member.display_name}
-                {isSelf && " (du)"}
+                {isSelf && t("common.you")}
               </span>
             </span>
             <div className="flex shrink-0 items-center gap-2">
               {isListOwner && (
                 <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                  Owner
+                  {t("lists.owner")}
                 </span>
               )}
               {isSelf && !isListOwner && (
@@ -63,7 +66,7 @@ export function ListMemberList({
                   disabled={isPending}
                   className="text-xs text-zinc-500 hover:text-red-600 disabled:opacity-50"
                 >
-                  Verlassen
+                  {t("common.leave")}
                 </button>
               )}
               {isOwner && !isSelf && (
@@ -73,7 +76,7 @@ export function ListMemberList({
                   disabled={isPending}
                   className="text-xs text-zinc-500 hover:text-red-600 disabled:opacity-50"
                 >
-                  Entfernen
+                  {t("common.remove")}
                 </button>
               )}
             </div>

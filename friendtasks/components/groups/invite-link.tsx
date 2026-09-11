@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/i18n/locale-provider";
 
 export function InviteLink({ token, basePath = "groups" }: { token: string; basePath?: "groups" | "lists" }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   // Lazy initializer so this only reads window.location once, on the client
   // (server render gets ""); reflects the actual host without an env var.
   const [url] = useState(() =>
@@ -32,7 +34,7 @@ export function InviteLink({ token, basePath = "groups" }: { token: string; base
         className="min-w-0 flex-1"
       />
       <Button variant="secondary" type="button" onClick={handleCopy} className="shrink-0">
-        {copied ? "Kopiert" : "Kopieren"}
+        {copied ? t("common.copied") : t("common.copy")}
       </Button>
     </div>
   );

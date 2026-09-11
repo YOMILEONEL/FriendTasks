@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
+import { getLocale } from "@/lib/i18n/server";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,22 +15,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "FriendTasks",
-  description: "Todo-App für Freundeskreise",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return {
+    title: "FriendTasks",
+    description: locale === "en" ? "Todo app for friends" : "Todo-App für Freundeskreise",
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const cookieStore = await cookies();
+  const [cookieStore, locale] = await Promise.all([cookies(), getLocale()]);
   const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : "light";
 
   return (
     <html
-      lang="de"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} ${theme === "dark" ? "dark" : ""} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-        {children}
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createTodo } from "@/lib/actions/todos";
 import { Button } from "@/components/ui/button";
 import { TodoForm } from "@/components/todo/todo-form";
+import { useT } from "@/components/i18n/locale-provider";
 
 export function NewTodo({
   defaultDueDate,
@@ -19,11 +20,12 @@ export function NewTodo({
   startOpen?: boolean;
 }) {
   const [open, setOpen] = useState(startOpen);
+  const t = useT();
 
   if (!open) {
     return (
       <Button variant="secondary" onClick={() => setOpen(true)} className="w-full justify-center">
-        + Neues Todo
+        {t("todo.newButton")}
       </Button>
     );
   }

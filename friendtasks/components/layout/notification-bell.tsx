@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import { markAllNotificationsRead, markNotificationsRead } from "@/lib/actions/notifications";
 import { createClient } from "@/lib/supabase/client";
 import { BellIcon } from "@/components/layout/icons";
+import { useT } from "@/components/i18n/locale-provider";
+import { format } from "@/lib/i18n/format";
 import type { NotificationView } from "@/lib/data/notifications";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 
 interface Bundle {
   key: string;
@@ -49,15 +52,18 @@ function bundle(notifications: NotificationView[]): Bundle[] {
   return Array.from(map.values()).sort((a, b) => (a.latest.created_at < b.latest.created_at ? 1 : -1));
 }
 
-function bundleLabel(b: Bundle): string {
+function bundleLabel(b: Bundle, t: (key: DictionaryKey) => string): string {
   if (b.type === "assigned") {
     return b.count === 1
-      ? `${b.actorNames[0]} hat dir „${b.latest.message ?? "ein Todo"}" zugewiesen`
-      : `${b.count} neue Zuweisungen`;
+      ? format(t("notifications.assignedOne"), {
+          actor: b.actorNames[0],
+          title: b.latest.message ?? t("notifications.aTodo"),
+        })
+      : format(t("notifications.assignedMany"), { count: b.count });
   }
   return b.count === 1
-    ? `${b.actorNames[0]} hat kommentiert: „${b.latest.message ?? ""}"`
-    : `${b.count} neue Kommentare`;
+    ? format(t("notifications.commentOne"), { actor: b.actorNames[0], message: b.latest.message ?? "" })
+    : format(t("notifications.commentMany"), { count: b.count });
 }
 
 function bundleHref(b: Bundle): string {
@@ -76,6 +82,7 @@ export function NotificationBell({
   const [notifications, setNotifications] = useState(initialNotifications);
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const t = useT();
 
   useEffect(() => {
     const supabase = createClient();
@@ -116,7 +123,7 @@ export function NotificationBell({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Benachrichtigungen"
+        aria-label={t("topbar.notifications")}
         className="relative flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
       >
         <BellIcon className="h-5 w-5" />
@@ -132,21 +139,21 @@ export function NotificationBell({
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-40 mt-2 w-80 max-w-[90vw] rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center justify-between border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
-              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Benachrichtigungen</span>
+              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{t("topbar.notifications")}</span>
               {unreadCount > 0 && (
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
                   className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50"
                 >
-                  Alle gelesen
+                  {t("topbar.markAllRead")}
                 </button>
               )}
             </div>
             <ul className="max-h-80 overflow-y-auto">
               {bundles.length === 0 ? (
                 <li className="px-3 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                  Keine Benachrichtigungen.
+                  {t("topbar.noNotifications")}
                 </li>
               ) : (
                 bundles.map((b) => (
@@ -158,7 +165,7 @@ export function NotificationBell({
                         b.hasUnread ? "font-medium text-zinc-900 dark:text-zinc-50" : "text-zinc-500 dark:text-zinc-400"
                       }`}
                     >
-                      {bundleLabel(b)}
+                      {bundleLabel(b, t)}
                     </Link>
                   </li>
                 ))

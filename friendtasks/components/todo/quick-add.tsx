@@ -5,6 +5,7 @@ import { quickAddTodo } from "@/lib/actions/todos";
 import { parseQuickAdd } from "@/lib/utils/quick-add";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Tag } from "@/lib/types/todo";
 
 export function QuickAdd({
@@ -20,6 +21,7 @@ export function QuickAdd({
 }) {
   const [value, setValue] = useState("");
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,7 +51,7 @@ export function QuickAdd({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={isPending}
-        placeholder='Schnell hinzufügen: "Müll rausbringen jeden Montag 18 Uhr #WG @Max"'
+        placeholder={t("quickAdd.placeholder")}
       />
       <Button type="submit" variant="secondary" disabled={isPending} className="shrink-0">
         {isPending ? "…" : "+"}

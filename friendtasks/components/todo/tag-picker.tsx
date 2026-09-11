@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { setTodoTags } from "@/lib/actions/todos";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Tag } from "@/lib/types/todo";
 
 export function TagPicker({
@@ -15,6 +16,7 @@ export function TagPicker({
 }) {
   const [selected, setSelected] = useState(new Set(selectedTagIds));
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function toggle(tagId: string) {
     const next = new Set(selected);
@@ -31,9 +33,7 @@ export function TagPicker({
 
   if (allTags.length === 0) {
     return (
-      <p className="text-xs text-zinc-400 dark:text-zinc-500">
-        Noch keine Tags angelegt. In den Einstellungen erstellen.
-      </p>
+      <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("tags.noneYet")}</p>
     );
   }
 

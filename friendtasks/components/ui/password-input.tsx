@@ -2,6 +2,7 @@
 
 import { useState, type InputHTMLAttributes } from "react";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/components/i18n/locale-provider";
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -27,6 +28,7 @@ export function PasswordInput({
   ...props
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
   const [visible, setVisible] = useState(false);
+  const t = useT();
 
   return (
     <div className="relative">
@@ -34,7 +36,7 @@ export function PasswordInput({
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? "Passwort verbergen" : "Passwort anzeigen"}
+        aria-label={visible ? t("auth.hidePassword") : t("auth.showPassword")}
         className="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
       >
         {visible ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}

@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatTime } from "@/lib/utils/date";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import type { Priority, Recurrence } from "@/lib/types/database";
 import type { Todo } from "@/lib/types/todo";
 
-const PRIORITIES: { value: Priority; label: string; className: string }[] = [
-  { value: "low", label: "Niedrig", className: "bg-zinc-400" },
-  { value: "medium", label: "Mittel", className: "bg-amber-500" },
-  { value: "high", label: "Hoch", className: "bg-red-500" },
+const PRIORITIES: { value: Priority; labelKey: DictionaryKey; className: string }[] = [
+  { value: "low", labelKey: "todoForm.priorityLow", className: "bg-zinc-400" },
+  { value: "medium", labelKey: "todoForm.priorityMedium", className: "bg-amber-500" },
+  { value: "high", labelKey: "todoForm.priorityHigh", className: "bg-red-500" },
 ];
 
 export function TodoForm({
@@ -25,7 +28,7 @@ export function TodoForm({
   groupId,
   listId,
   onDone,
-  submitLabel = "Todo erstellen",
+  submitLabel,
 }: {
   action: (formData: FormData) => Promise<void>;
   todo?: Pick<
@@ -37,6 +40,7 @@ export function TodoForm({
     | "due_time_end"
     | "priority"
     | "recurrence"
+    | "recurrence_until"
     | "claimable"
   >;
   // Id of the todo being edited, so it can be excluded from the overlap
@@ -55,6 +59,8 @@ export function TodoForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const [priority, setPriority] = useState<Priority>(todo?.priority ?? "medium");
+  const [recurrence, setRecurrence] = useState<"none" | Recurrence>(todo?.recurrence ?? "none");
+  const t = useT();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,9 +75,7 @@ export function TodoForm({
       if (dueDate && dueTime) {
         const overlapping = await checkTodoOverlap({ dueDate, dueTime, dueTimeEnd, excludeTodoId: todoId });
         if (overlapping.length > 0) {
-          const proceed = confirm(
-            `Diese Aufgabe überschneidet sich zeitlich mit: ${overlapping.join(", ")}. Trotzdem speichern?`
-          );
+          const proceed = confirm(format(t("todoForm.overlapConfirm"), { names: overlapping.join(", ") }));
           if (!proceed) return;
         }
       }
@@ -88,17 +92,17 @@ export function TodoForm({
       {listId && <input type="hidden" name="listId" value={listId} />}
       <input type="hidden" name="priority" value={priority} />
       <div>
-        <Label htmlFor="title">Titel</Label>
+        <Label htmlFor="title">{t("todoForm.title")}</Label>
         <Input
           id="title"
           name="title"
           required
           defaultValue={todo?.title}
-          placeholder="Was ist zu tun?"
+          placeholder={t("todoForm.titlePlaceholder")}
         />
       </div>
       <div>
-        <Label htmlFor="description">Beschreibung (optional)</Label>
+        <Label htmlFor="description">{t("todoForm.description")}</Label>
         <Textarea
           id="description"
           name="description"
@@ -107,7 +111,7 @@ export function TodoForm({
         />
       </div>
       <div>
-        <Label htmlFor="dueDate">Fälligkeitsdatum</Label>
+        <Label htmlFor="dueDate">{t("todoForm.dueDate")}</Label>
         <Input
           id="dueDate"
           name="dueDate"
@@ -117,7 +121,7 @@ export function TodoForm({
       </div>
       <div className="flex gap-3">
         <div className="flex-1">
-          <Label htmlFor="dueTime">Start</Label>
+          <Label htmlFor="dueTime">{t("todoForm.start")}</Label>
           <Input
             id="dueTime"
             name="dueTime"
@@ -126,7 +130,7 @@ export function TodoForm({
           />
         </div>
         <div className="flex-1">
-          <Label htmlFor="dueTimeEnd">Ende</Label>
+          <Label htmlFor="dueTimeEnd">{t("todoForm.end")}</Label>
           <Input
             id="dueTimeEnd"
             name="dueTimeEnd"
@@ -136,13 +140,29 @@ export function TodoForm({
         </div>
       </div>
       <div>
-        <Label htmlFor="recurrence">Wiederholung</Label>
-        <Select id="recurrence" name="recurrence" defaultValue={todo?.recurrence ?? ("none" satisfies "none" | Recurrence)}>
-          <option value="none">Keine</option>
-          <option value="weekly">Wöchentlich</option>
-          <option value="monthly">Monatlich</option>
+        <Label htmlFor="recurrence">{t("todoForm.recurrence")}</Label>
+        <Select
+          id="recurrence"
+          name="recurrence"
+          value={recurrence}
+          onChange={(e) => setRecurrence(e.target.value as "none" | Recurrence)}
+        >
+          <option value="none">{t("common.none")}</option>
+          <option value="weekly">{t("recurrence.weekly")}</option>
+          <option value="monthly">{t("recurrence.monthly")}</option>
         </Select>
       </div>
+      {recurrence !== "none" && (
+        <div>
+          <Label htmlFor="recurrenceUntil">{t("todoForm.recurrenceUntil")}</Label>
+          <Input
+            id="recurrenceUntil"
+            name="recurrenceUntil"
+            type="date"
+            defaultValue={todo?.recurrence_until ?? ""}
+          />
+        </div>
+      )}
       {groupId && (
         <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
           <input
@@ -151,11 +171,11 @@ export function TodoForm({
             defaultChecked={todo?.claimable ?? false}
             className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
           />
-          Offen für alle (kein fester Owner)
+          {t("todo.claimableOption")}
         </label>
       )}
       <div>
-        <Label>Priorität</Label>
+        <Label>{t("todoForm.priority")}</Label>
         <div className="flex gap-2">
           {PRIORITIES.map((p) => (
             <button
@@ -163,7 +183,7 @@ export function TodoForm({
               type="button"
               onClick={() => setPriority(p.value)}
               aria-pressed={priority === p.value}
-              title={p.label}
+              title={t(p.labelKey)}
               className={`h-8 w-8 rounded-full ${p.className} transition-shadow ${
                 priority === p.value
                   ? "ring-2 ring-offset-2 ring-zinc-900 dark:ring-offset-zinc-950 dark:ring-zinc-50"
@@ -176,11 +196,11 @@ export function TodoForm({
       <div className="flex justify-end gap-2">
         {onDone && (
           <Button type="button" variant="ghost" onClick={onDone} disabled={isPending}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
         )}
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Speichert…" : submitLabel}
+          {isPending ? t("common.saving") : (submitLabel ?? t("todo.createLabel"))}
         </Button>
       </div>
     </form>

@@ -7,33 +7,35 @@ import { signup } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { useT } from "@/components/i18n/locale-provider";
 
 export default function SignupPage() {
   const [state, action, pending] = useActionState(signup, undefined);
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
+  const t = useT();
 
   return (
     <form action={action} className="space-y-4">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Konto erstellen</h1>
+      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t("auth.createAccount")}</h1>
       {next && <input type="hidden" name="next" value={next} />}
       <div>
-        <Label htmlFor="displayName">Anzeigename</Label>
+        <Label htmlFor="displayName">{t("auth.displayName")}</Label>
         <Input id="displayName" name="displayName" required autoComplete="nickname" />
         <FieldError messages={state?.errors?.displayName} />
       </div>
       <div>
-        <Label htmlFor="email">E-Mail</Label>
+        <Label htmlFor="email">{t("auth.email")}</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" />
         <FieldError messages={state?.errors?.email} />
       </div>
       <div>
-        <Label htmlFor="password">Passwort</Label>
+        <Label htmlFor="password">{t("auth.password")}</Label>
         <PasswordInput id="password" name="password" required autoComplete="new-password" />
         <FieldError messages={state?.errors?.password} />
       </div>
       <div>
-        <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+        <Label htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
         <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
@@ -46,15 +48,15 @@ export default function SignupPage() {
         <p className="text-sm text-zinc-600 dark:text-zinc-400">{state.message}</p>
       )}
       <Button type="submit" disabled={pending} className="w-full justify-center">
-        {pending ? "Erstellt Konto…" : "Konto erstellen"}
+        {pending ? t("auth.creatingAccount") : t("auth.createAccount")}
       </Button>
       <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-        Bereits registriert?{" "}
+        {t("auth.alreadyRegistered")}{" "}
         <Link
           href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
           className="text-zinc-900 hover:underline dark:text-zinc-50"
         >
-          Anmelden
+          {t("auth.login")}
         </Link>
       </p>
     </form>

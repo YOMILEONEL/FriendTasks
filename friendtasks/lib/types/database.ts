@@ -94,6 +94,7 @@ export interface Database {
           priority: Priority;
           status: TodoStatus;
           recurrence: Recurrence | null;
+          recurrence_until: string | null;
           owner_id: string;
           group_id: string | null;
           list_id: string | null;
@@ -111,6 +112,7 @@ export interface Database {
           priority?: Priority;
           status?: TodoStatus;
           recurrence?: Recurrence | null;
+          recurrence_until?: string | null;
           owner_id: string;
           group_id?: string | null;
           list_id?: string | null;
@@ -125,10 +127,24 @@ export interface Database {
           priority?: Priority;
           status?: TodoStatus;
           recurrence?: Recurrence | null;
+          recurrence_until?: string | null;
           group_id?: string | null;
           list_id?: string | null;
           claimable?: boolean;
         };
+        Relationships: [];
+      };
+      todo_occurrence_completions: {
+        Row: {
+          todo_id: string;
+          occurrence_date: string;
+          completed_at: string;
+        };
+        Insert: {
+          todo_id: string;
+          occurrence_date: string;
+        };
+        Update: never;
         Relationships: [];
       };
       lists: {

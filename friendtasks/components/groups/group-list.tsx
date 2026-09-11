@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Group } from "@/lib/types/group";
 
 export function GroupList({ groups }: { groups: Group[] }) {
   const [query, setQuery] = useState("");
+  const t = useT();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -20,14 +22,12 @@ export function GroupList({ groups }: { groups: Group[] }) {
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Gruppe suchen…"
+          placeholder={t("groups.searchPlaceholder")}
         />
       )}
       {filtered.length === 0 ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {groups.length === 0
-            ? "Du bist noch in keiner Gruppe. Erstelle eine oder tritt über einen Einladungslink bei."
-            : "Keine Gruppe gefunden."}
+          {groups.length === 0 ? t("groups.emptyNone") : t("groups.emptySearch")}
         </p>
       ) : (
         <ul className="space-y-2">

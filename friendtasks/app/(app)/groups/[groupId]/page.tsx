@@ -7,6 +7,7 @@ import { getGroupActivity } from "@/lib/data/activity";
 import { getGroupNotes } from "@/lib/data/notes";
 import { createGroupList } from "@/lib/actions/lists";
 import { saveGroupNotes } from "@/lib/actions/notes";
+import { getDictionary } from "@/lib/i18n/server";
 import { MemberList } from "@/components/groups/member-list";
 import { InviteLink } from "@/components/groups/invite-link";
 import { ActivityFeed } from "@/components/groups/activity-feed";
@@ -35,12 +36,13 @@ export default async function GroupDetailPage({
   if (!group) notFound();
 
   const filters = (await searchParams) as TodoFilters;
-  const [todos, tags, lists, activity, notes] = await Promise.all([
+  const [todos, tags, lists, activity, notes, t] = await Promise.all([
     getGroupTodos(groupId, filters),
     getUserTags(),
     getGroupLists(groupId),
     getGroupActivity(groupId),
     getGroupNotes(groupId),
+    getDictionary(),
   ]);
 
   const currentMember = group.members.find((m) => m.user_id === session.userId);
@@ -54,7 +56,7 @@ export default async function GroupDetailPage({
       <h1 className="text-xl font-semibold">{group.name}</h1>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Mitglieder</h2>
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.members"]}</h2>
         <MemberList
           groupId={groupId}
           members={group.members}
@@ -65,20 +67,20 @@ export default async function GroupDetailPage({
 
       {isAdmin && (
         <div className="space-y-3">
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Einladungslink</h2>
+          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.inviteLink"]}</h2>
           <InviteLink token={group.invite_token} />
         </div>
       )}
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Notizen</h2>
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.notes"]}</h2>
         <NotesEditor initialContent={notes} onSave={saveGroupNotes.bind(null, groupId)} />
       </div>
 
       <TodoFilterBar basePath={`/groups/${groupId}`} tags={tags} />
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Todos</h2>
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["shared.todos"]}</h2>
         <QuickAdd
           tags={tags}
           members={group.members.map((m) => ({ user_id: m.user_id, display_name: m.display_name }))}
@@ -89,12 +91,12 @@ export default async function GroupDetailPage({
           todos={unlistedTodos}
           allTags={tags}
           groupMembers={group.members}
-          emptyMessage="Noch keine Todos ohne Liste."
+          emptyMessage={t["groups.noUnlistedTodos"]}
         />
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Listen</h2>
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["nav.lists"]}</h2>
         {lists.map((list) => (
           <div
             key={list.id}
@@ -109,29 +111,29 @@ export default async function GroupDetailPage({
               todos={todosByListId.get(list.id) ?? []}
               allTags={tags}
               groupMembers={group.members}
-              emptyMessage="Noch keine Todos in dieser Liste."
+              emptyMessage={t["shared.noListTodos"]}
             />
           </div>
         ))}
         <form action={createGroupList.bind(null, groupId)} className="flex flex-wrap items-end gap-2">
           <div className="min-w-[160px] flex-1">
-            <Label htmlFor="listName">Neue Liste</Label>
-            <Input id="listName" name="name" required placeholder="z. B. Einkaufen" />
+            <Label htmlFor="listName">{t["list.new"]}</Label>
+            <Input id="listName" name="name" required placeholder={t["list.namePlaceholderGroup"]} />
           </div>
           <Button type="submit" variant="secondary" className="shrink-0">
-            Erstellen
+            {t["common.create"]}
           </Button>
         </form>
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Aktivität</h2>
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t["activity.title"]}</h2>
         <ActivityFeed entries={activity} />
       </div>
 
       {isAdmin && (
         <div className="space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-          <h2 className="text-sm font-medium text-red-600 dark:text-red-400">Gefahrenzone</h2>
+          <h2 className="text-sm font-medium text-red-600 dark:text-red-400">{t["shared.dangerZone"]}</h2>
           <DeleteGroupButton groupId={groupId} groupName={group.name} />
         </div>
       )}

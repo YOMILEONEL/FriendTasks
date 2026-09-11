@@ -1,9 +1,13 @@
+"use client";
+
+import { useT } from "@/components/i18n/locale-provider";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import type { Priority } from "@/lib/types/database";
 
-const LABELS: Record<Priority, string> = {
-  low: "Niedrig",
-  medium: "Mittel",
-  high: "Hoch",
+const LABEL_KEYS: Record<Priority, DictionaryKey> = {
+  low: "todoForm.priorityLow",
+  medium: "todoForm.priorityMedium",
+  high: "todoForm.priorityHigh",
 };
 
 const CLASSES: Record<Priority, string> = {
@@ -13,9 +17,10 @@ const CLASSES: Record<Priority, string> = {
 };
 
 export function PriorityBadge({ priority }: { priority: Priority }) {
+  const t = useT();
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${CLASSES[priority]}`}>
-      {LABELS[priority]}
+      {t(LABEL_KEYS[priority])}
     </span>
   );
 }

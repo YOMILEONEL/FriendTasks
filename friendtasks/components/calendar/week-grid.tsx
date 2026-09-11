@@ -4,6 +4,8 @@ import { useState } from "react";
 import { formatDayColumnLabel, todayISO } from "@/lib/utils/date";
 import { TodoChip } from "@/components/calendar/todo-chip";
 import { TodoModal } from "@/components/calendar/todo-modal";
+import { TodoChoiceModal } from "@/components/calendar/todo-choice-modal";
+import { useLocale, useT } from "@/components/i18n/locale-provider";
 import type { TodoWithRelations } from "@/lib/types/todo";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -13,6 +15,7 @@ const GRID_TEMPLATE_COLUMNS = "64px repeat(7, minmax(0, 1fr))";
 type ModalState =
   | { mode: "create"; date: string; time?: string }
   | { mode: "edit"; todo: TodoWithRelations }
+  | { mode: "choose"; todos: TodoWithRelations[] }
   | null;
 
 // Grid row lines are 1-indexed; line N is the top edge of the row for hour
@@ -34,6 +37,8 @@ export function WeekGrid({
 }) {
   const [modal, setModal] = useState<ModalState>(null);
   const today = todayISO();
+  const t = useT();
+  const locale = useLocale();
 
   const allDayByDay = new Map<string, TodoWithRelations[]>();
   const timedTodos: TodoWithRelations[] = [];
@@ -55,6 +60,20 @@ export function WeekGrid({
 
   function openEdit(todo: TodoWithRelations) {
     setModal({ mode: "edit", todo });
+  }
+
+  // Groups todos sharing the same day + start hour, so overlapping entries
+  // render as one stacked chip with a chooser instead of silently hiding
+  // each other in the same grid cell.
+  const timedGroups = new Map<string, TodoWithRelations[]>();
+  for (const todo of timedTodos) {
+    const dayIndex = weekDays.indexOf(todo.due_date!);
+    if (dayIndex === -1) continue;
+    const startLine = timeToLine(todo.due_time!, false);
+    const key = `${dayIndex}-${startLine}`;
+    const list = timedGroups.get(key) ?? [];
+    list.push(todo);
+    timedGroups.set(key, list);
   }
 
   return (
@@ -86,7 +105,7 @@ export function WeekGrid({
                         : ""
                     }
                   >
-                    {formatDayColumnLabel(dateISO)}
+                    {formatDayColumnLabel(dateISO, locale)}
                   </span>
                 </button>
               );
@@ -99,7 +118,7 @@ export function WeekGrid({
             style={{ gridTemplateColumns: GRID_TEMPLATE_COLUMNS }}
           >
             <div className="flex items-center justify-end px-2 py-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-              Ganztägig
+              {t("calendar.allDay")}
             </div>
             {weekDays.map((dateISO) => (
               <button
@@ -155,26 +174,38 @@ export function WeekGrid({
                 ))
               )}
 
-              {timedTodos.map((todo) => {
-                const dayIndex = weekDays.indexOf(todo.due_date!);
-                if (dayIndex === -1) return null;
-                const startLine = timeToLine(todo.due_time!, false);
-                const endLine = todo.due_time_end
-                  ? Math.max(timeToLine(todo.due_time_end, true), startLine + 1)
-                  : startLine + 1;
+              {[...timedGroups.entries()].map(([key, group]) => {
+                const [dayIndexStr, startLineStr] = key.split("-");
+                const dayIndex = Number(dayIndexStr);
+                const startLine = Number(startLineStr);
+                const endLine = Math.max(
+                  ...group.map((todo) =>
+                    todo.due_time_end
+                      ? Math.max(timeToLine(todo.due_time_end, true), startLine + 1)
+                      : startLine + 1
+                  )
+                );
+                const primary = group[0];
 
                 return (
                   <button
-                    key={todo.id}
+                    key={key}
                     type="button"
-                    onClick={() => openEdit(todo)}
-                    className="z-10 m-px text-left"
+                    onClick={() =>
+                      group.length > 1 ? setModal({ mode: "choose", todos: group }) : openEdit(primary)
+                    }
+                    className="relative z-10 m-px text-left"
                     style={{
                       gridColumn: dayIndex + 2,
                       gridRow: `${startLine} / ${Math.min(endLine, 25)}`,
                     }}
                   >
-                    <TodoChip todo={todo} />
+                    <TodoChip todo={primary} />
+                    {group.length > 1 && (
+                      <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-900 px-1 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
+                        +{group.length - 1}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -188,6 +219,13 @@ export function WeekGrid({
       )}
       {modal?.mode === "edit" && (
         <TodoModal date={modal.todo.due_date!} todo={modal.todo} onClose={() => setModal(null)} />
+      )}
+      {modal?.mode === "choose" && (
+        <TodoChoiceModal
+          todos={modal.todos}
+          onSelect={(todo) => setModal({ mode: "edit", todo })}
+          onClose={() => setModal(null)}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/i18n/locale-provider";
 
 export function NotesEditor({
   initialContent,
@@ -14,6 +15,7 @@ export function NotesEditor({
   const [content, setContent] = useState(initialContent);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const t = useT();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,10 +34,10 @@ export function NotesEditor({
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={4}
-        placeholder="z. B. WLAN-Passwort, gemeinsame Hinweise…"
+        placeholder={t("notes.placeholder")}
       />
       <Button type="submit" variant="secondary" disabled={isPending}>
-        {isPending ? "Speichert…" : saved ? "Gespeichert" : "Speichern"}
+        {isPending ? t("common.saving") : saved ? t("common.saved") : t("common.save")}
       </Button>
     </form>
   );

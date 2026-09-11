@@ -4,11 +4,13 @@ import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { createComment, deleteComment, listComments, type CommentView } from "@/lib/actions/comments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/components/i18n/locale-provider";
 
 export function CommentList({ todoId }: { todoId: string }) {
   const [comments, setComments] = useState<CommentView[] | null>(null);
   const [value, setValue] = useState("");
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function refresh() {
     startTransition(async () => {
@@ -34,7 +36,7 @@ export function CommentList({ todoId }: { todoId: string }) {
   }
 
   function handleDelete(commentId: string) {
-    if (!confirm("Kommentar wirklich löschen?")) return;
+    if (!confirm(t("comments.deleteConfirm"))) return;
     startTransition(async () => {
       await deleteComment(commentId);
       refresh();
@@ -43,11 +45,11 @@ export function CommentList({ todoId }: { todoId: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-zinc-400 dark:text-zinc-500">Kommentare</p>
+      <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("comments.title")}</p>
       {comments === null ? (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">Lädt…</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("common.loading")}</p>
       ) : comments.length === 0 ? (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">Noch keine Kommentare.</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("comments.empty")}</p>
       ) : (
         <ul className="space-y-1.5">
           {comments.map((c) => (
@@ -60,7 +62,7 @@ export function CommentList({ todoId }: { todoId: string }) {
                     onClick={() => handleDelete(c.id)}
                     className="text-xs text-zinc-400 hover:text-red-600"
                   >
-                    Löschen
+                    {t("common.delete")}
                   </button>
                 )}
               </div>
@@ -73,11 +75,11 @@ export function CommentList({ todoId }: { todoId: string }) {
         <Input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Kommentar schreiben…"
+          placeholder={t("comments.placeholder")}
           disabled={isPending}
         />
         <Button type="submit" variant="secondary" disabled={isPending} className="shrink-0">
-          Senden
+          {t("common.send")}
         </Button>
       </form>
     </div>

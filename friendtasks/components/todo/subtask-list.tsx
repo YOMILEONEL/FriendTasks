@@ -5,11 +5,14 @@ import { createSubtask, deleteSubtask, toggleSubtask } from "@/lib/actions/todos
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { format } from "@/lib/i18n/format";
+import { useT } from "@/components/i18n/locale-provider";
 import type { Subtask } from "@/lib/types/todo";
 
 export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Subtask[] }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const t = useT();
 
   function handleToggle(subtaskId: string, done: boolean) {
     startTransition(() => {
@@ -18,7 +21,7 @@ export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Su
   }
 
   function handleDelete(subtaskId: string, title: string) {
-    if (!confirm(`Unteraufgabe „${title}" wirklich löschen?`)) return;
+    if (!confirm(format(t("subtask.deleteConfirm"), { title }))) return;
     startTransition(() => {
       deleteSubtask(subtaskId);
     });
@@ -47,7 +50,7 @@ export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Su
             onClick={() => handleDelete(subtask.id, subtask.title)}
             disabled={isPending}
             className="text-zinc-400 hover:text-red-600 disabled:opacity-50"
-            aria-label="Unteraufgabe löschen"
+            aria-label={t("subtask.delete")}
           >
             ×
           </button>
@@ -66,7 +69,7 @@ export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Su
         <input type="hidden" name="todoId" value={todoId} />
         <Input
           name="title"
-          placeholder="Unteraufgabe hinzufügen…"
+          placeholder={t("subtask.addPlaceholder")}
           className="min-w-0 flex-1 py-1 text-sm"
           disabled={isPending}
         />

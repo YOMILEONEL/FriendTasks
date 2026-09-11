@@ -98,23 +98,26 @@ async function withGroupNames(
 
 // Rolls a recurring todo's due date forward (respecting its recurrence
 // interval) until it lands within [rangeStart, rangeEnd], or returns null if
-// it never falls in range (e.g. the anchor date is still in the future).
-// Capped iteration count: cheap and plenty for any date range this app
-// actually queries (a single week, or "today").
+// it never falls in range (e.g. the anchor date is still in the future, or
+// the series' recurrenceUntil ends before rangeStart). Capped iteration
+// count: cheap and plenty for any date range this app actually queries (a
+// single week, or "today").
 function projectDueDate(
   dueDate: string,
   recurrence: Recurrence,
   rangeStart: string,
-  rangeEnd: string
+  rangeEnd: string,
+  recurrenceUntil: string | null
 ): string | null {
-  if (dueDate > rangeEnd) return null;
+  const effectiveEnd = recurrenceUntil && recurrenceUntil < rangeEnd ? recurrenceUntil : rangeEnd;
+  if (dueDate > effectiveEnd) return null;
   let candidate = dueDate;
   let iterations = 0;
   while (candidate < rangeStart && iterations < 500) {
     candidate = nextRecurrenceDate(candidate, recurrence);
     iterations++;
   }
-  return candidate >= rangeStart && candidate <= rangeEnd ? candidate : null;
+  return candidate >= rangeStart && candidate <= effectiveEnd ? candidate : null;
 }
 
 // Recurring todos whose real due_date already fell before `rangeStart` still
@@ -149,10 +152,50 @@ async function getProjectedRecurringTodos(
   const projected: TodoWithRelations[] = [];
   for (const todo of toTodoRows(data).map(mapTodo)) {
     if (!todo.due_date || !todo.recurrence) continue;
-    const projectedDate = projectDueDate(todo.due_date, todo.recurrence, rangeStart, rangeEnd);
+    const projectedDate = projectDueDate(
+      todo.due_date,
+      todo.recurrence,
+      rangeStart,
+      rangeEnd,
+      todo.recurrence_until
+    );
     if (projectedDate) projected.push({ ...todo, due_date: projectedDate });
   }
   return projected;
+}
+
+// A completed occurrence of a recurring todo no longer has a row sitting on
+// its date (toggleTodoStatus advances due_date to the next occurrence), so
+// without this the calendar would have nothing to show there. Returns one
+// virtual TodoWithRelations per completion in [rangeStart, rangeEnd], with
+// due_date swapped to the completed occurrence's date and status forced to
+// "done" — same display-projection idea as getProjectedRecurringTodos, just
+// for the past instead of the future.
+async function getCompletedRecurringOccurrences(
+  supabase: SupabaseClient<Database>,
+  rangeStart: string,
+  rangeEnd: string
+): Promise<TodoWithRelations[]> {
+  const { data: completions, error: completionsError } = await supabase
+    .from("todo_occurrence_completions")
+    .select("todo_id, occurrence_date")
+    .gte("occurrence_date", rangeStart)
+    .lte("occurrence_date", rangeEnd);
+  if (completionsError) throw new Error(completionsError.message);
+  if (!completions || completions.length === 0) return [];
+
+  const todoIds = [...new Set(completions.map((c) => c.todo_id))];
+  const { data, error } = await supabase.from("todos").select(TODO_SELECT).in("id", todoIds);
+  if (error) throw new Error(error.message);
+
+  const todoById = new Map(toTodoRows(data).map(mapTodo).map((todo) => [todo.id, todo]));
+  const completed: TodoWithRelations[] = [];
+  for (const c of completions) {
+    const todo = todoById.get(c.todo_id);
+    if (!todo) continue;
+    completed.push({ ...todo, due_date: c.occurrence_date, status: "done" });
+  }
+  return completed;
 }
 
 // Like getAllTodos below: not filtered to the caller's own todos, so a
@@ -263,7 +306,7 @@ export async function getWeekTodos(mondayISO: string): Promise<TodoWithRelations
   const supabase = await createClient();
   const days = getWeekDays(mondayISO);
 
-  const [{ data, error }, projected] = await Promise.all([
+  const [{ data, error }, projected, completed] = await Promise.all([
     supabase
       .from("todos")
       .select(TODO_SELECT)
@@ -271,10 +314,11 @@ export async function getWeekTodos(mondayISO: string): Promise<TodoWithRelations
       .lte("due_date", days[6])
       .order("due_time", { ascending: true, nullsFirst: true }),
     getProjectedRecurringTodos(supabase, days[0], days[6]),
+    getCompletedRecurringOccurrences(supabase, days[0], days[6]),
   ]);
 
   if (error) throw new Error(error.message);
-  return withGroupNames(supabase, [...toTodoRows(data).map(mapTodo), ...projected]);
+  return withGroupNames(supabase, [...toTodoRows(data).map(mapTodo), ...projected, ...completed]);
 }
 
 export interface TodoAlerts {

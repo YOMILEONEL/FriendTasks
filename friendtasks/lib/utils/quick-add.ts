@@ -1,21 +1,24 @@
 // Best-effort natural-language parsing for quick-add (FR-24), e.g.
-// "Müll rausbringen jeden Montag 18 Uhr #WG @Max". Deliberately simple
-// (hand-rolled regexes, no NLP library): it only has to get the common case
-// right, since whatever it gets wrong is still fully editable afterwards.
+// "Müll rausbringen jeden Montag 18 Uhr #WG @Max" or its English
+// equivalent "Take out trash every Monday 6pm #WG @Max". Deliberately
+// simple (hand-rolled regexes, no NLP library): it only has to get the
+// common case right, since whatever it gets wrong is still fully editable
+// afterwards. Recognizes both German and English keywords regardless of
+// the current UI language, since the app itself is bilingual now.
 
 interface Weekday {
-  name: string;
+  names: string[];
   index: number; // matches Date#getDay() (0 = Sunday)
 }
 
 const WEEKDAYS: Weekday[] = [
-  { name: "montag", index: 1 },
-  { name: "dienstag", index: 2 },
-  { name: "mittwoch", index: 3 },
-  { name: "donnerstag", index: 4 },
-  { name: "freitag", index: 5 },
-  { name: "samstag", index: 6 },
-  { name: "sonntag", index: 0 },
+  { names: ["montag", "monday"], index: 1 },
+  { names: ["dienstag", "tuesday"], index: 2 },
+  { names: ["mittwoch", "wednesday"], index: 3 },
+  { names: ["donnerstag", "thursday"], index: 4 },
+  { names: ["freitag", "friday"], index: 5 },
+  { names: ["samstag", "saturday"], index: 6 },
+  { names: ["sonntag", "sunday"], index: 0 },
 ];
 
 function nextWeekdayISO(targetIndex: number): string {
@@ -49,11 +52,11 @@ export function parseQuickAdd(input: string, context: QuickAddContext): QuickAdd
   let dueTime: string | null = null;
   let recurrence: "weekly" | "none" = "none";
 
-  const weekdayPattern = WEEKDAYS.map((w) => w.name).join("|");
+  const weekdayPattern = WEEKDAYS.flatMap((w) => w.names).join("|");
 
-  const recurringMatch = remaining.match(new RegExp(`jeden\\s+(${weekdayPattern})`, "i"));
+  const recurringMatch = remaining.match(new RegExp(`(?:jeden|every)\\s+(${weekdayPattern})`, "i"));
   if (recurringMatch) {
-    const weekday = WEEKDAYS.find((w) => w.name === recurringMatch[1].toLowerCase());
+    const weekday = WEEKDAYS.find((w) => w.names.includes(recurringMatch[1].toLowerCase()));
     if (weekday) {
       dueDate = nextWeekdayISO(weekday.index);
       recurrence = "weekly";
@@ -63,7 +66,7 @@ export function parseQuickAdd(input: string, context: QuickAddContext): QuickAdd
     const onceMatch = remaining.match(new RegExp(`\\b(${weekdayPattern})s?\\b`, "i"));
     if (onceMatch) {
       const matched = onceMatch[1].toLowerCase();
-      const weekday = WEEKDAYS.find((w) => w.name === matched);
+      const weekday = WEEKDAYS.find((w) => w.names.includes(matched));
       if (weekday) {
         dueDate = nextWeekdayISO(weekday.index);
         remaining = remaining.replace(onceMatch[0], " ");
@@ -71,16 +74,24 @@ export function parseQuickAdd(input: string, context: QuickAddContext): QuickAdd
     }
   }
 
+  // German "18 Uhr" / "18:30 Uhr".
   const uhrMatch = remaining.match(/\b(\d{1,2})(?:[:.](\d{2}))?\s*uhr\b/i);
+  // English "6pm" / "6:30pm" / "6 pm".
+  const ampmMatch = remaining.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  // Bare 24h "18:30".
+  const bareTimeMatch = remaining.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+
   if (uhrMatch) {
     dueTime = `${uhrMatch[1].padStart(2, "0")}:${(uhrMatch[2] ?? "00").padStart(2, "0")}`;
     remaining = remaining.replace(uhrMatch[0], " ");
-  } else {
-    const bareTimeMatch = remaining.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
-    if (bareTimeMatch) {
-      dueTime = `${bareTimeMatch[1].padStart(2, "0")}:${bareTimeMatch[2]}`;
-      remaining = remaining.replace(bareTimeMatch[0], " ");
-    }
+  } else if (ampmMatch) {
+    let hour = Number(ampmMatch[1]) % 12;
+    if (ampmMatch[3].toLowerCase() === "pm") hour += 12;
+    dueTime = `${String(hour).padStart(2, "0")}:${(ampmMatch[2] ?? "00").padStart(2, "0")}`;
+    remaining = remaining.replace(ampmMatch[0], " ");
+  } else if (bareTimeMatch) {
+    dueTime = `${bareTimeMatch[1].padStart(2, "0")}:${bareTimeMatch[2]}`;
+    remaining = remaining.replace(bareTimeMatch[0], " ");
   }
 
   const tagIds: string[] = [];

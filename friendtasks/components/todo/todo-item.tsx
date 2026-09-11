@@ -12,6 +12,8 @@ import { CommentList } from "@/components/todo/comment-list";
 import { AttachmentList } from "@/components/todo/attachment-list";
 import { AssigneePicker } from "@/components/groups/assignee-picker";
 import { formatDueDate, formatTimeRange } from "@/lib/utils/date";
+import { format } from "@/lib/i18n/format";
+import { useLocale, useT } from "@/components/i18n/locale-provider";
 import type { Tag, TodoWithRelations } from "@/lib/types/todo";
 import type { GroupMember } from "@/lib/types/group";
 
@@ -27,20 +29,25 @@ export function TodoItem({
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const t = useT();
+  const locale = useLocale();
 
   const done = todo.status === "done";
-  const dueDate = formatDueDate(todo.due_date);
+  const dueDate = formatDueDate(todo.due_date, locale);
   const dueTime = formatTimeRange(todo.due_time, todo.due_time_end);
   const openSubtasks = todo.subtasks.filter((s) => !s.is_done).length;
 
   function handleToggle(checked: boolean) {
     startTransition(() => {
-      toggleTodoStatus(todo.id, checked);
+      // todo.due_date is whichever occurrence is currently being shown —
+      // the row's real due_date, or a projected/completed one — so this
+      // always identifies the right occurrence for a recurring todo too.
+      toggleTodoStatus(todo.id, checked, todo.due_date ?? undefined);
     });
   }
 
   function handleDelete() {
-    if (!confirm(`„${todo.title}" wirklich löschen?`)) return;
+    if (!confirm(format(t("todo.deleteConfirm"), { title: todo.title }))) return;
     startTransition(() => {
       deleteTodo(todo.id);
     });
@@ -86,9 +93,9 @@ export function TodoItem({
             {todo.recurrence && (
               <span
                 className="text-xs text-zinc-400 dark:text-zinc-500"
-                title={todo.recurrence === "weekly" ? "Wiederholt sich wöchentlich" : "Wiederholt sich monatlich"}
+                title={todo.recurrence === "weekly" ? t("recurrence.weeklyTooltip") : t("recurrence.monthlyTooltip")}
               >
-                ↻ {todo.recurrence === "weekly" ? "Wöchentlich" : "Monatlich"}
+                ↻ {todo.recurrence === "weekly" ? t("recurrence.weekly") : t("recurrence.monthly")}
               </span>
             )}
             {todo.group_name && (
@@ -109,7 +116,7 @@ export function TodoItem({
             )}
             {todo.subtasks.length > 0 && (
               <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                {todo.subtasks.length - openSubtasks}/{todo.subtasks.length} erledigt
+                {format(t("todo.doneCount"), { done: todo.subtasks.length - openSubtasks, total: todo.subtasks.length })}
               </span>
             )}
             {todo.tags.map((tag) => (
@@ -135,7 +142,7 @@ export function TodoItem({
             ))}
             {todo.claimable && todo.assignees.length === 0 && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                Offen für alle
+                {t("todo.claimableBadge")}
               </span>
             )}
           </div>
@@ -148,17 +155,17 @@ export function TodoItem({
               onClick={handleClaim}
               disabled={isPending}
             >
-              Übernehmen
+              {t("todo.claim")}
             </Button>
           )}
           <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleDuplicate} disabled={isPending}>
-            Duplizieren
+            {t("todo.duplicate")}
           </Button>
           <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditing((v) => !v)}>
-            {editing ? "Schließen" : "Bearbeiten"}
+            {editing ? t("common.close") : t("common.edit")}
           </Button>
           <Button variant="ghost" className="px-2 py-1 text-xs text-red-600" onClick={handleDelete}>
-            Löschen
+            {t("common.delete")}
           </Button>
         </div>
       </div>
@@ -169,7 +176,7 @@ export function TodoItem({
             todo={todo}
             todoId={todo.id}
             groupId={todo.group_id ?? undefined}
-            submitLabel="Speichern"
+            submitLabel={t("common.save")}
             action={updateTodo.bind(null, todo.id)}
             onDone={() => setEditing(false)}
           />
@@ -193,7 +200,7 @@ export function TodoItem({
           </div>
           {groupMembers && groupMembers.length > 0 && (
             <div className="mt-3">
-              <p className="mb-1 text-xs text-zinc-400 dark:text-zinc-500">Zugewiesen an</p>
+              <p className="mb-1 text-xs text-zinc-400 dark:text-zinc-500">{t("todo.assignedTo")}</p>
               <AssigneePicker
                 todoId={todo.id}
                 members={groupMembers}
