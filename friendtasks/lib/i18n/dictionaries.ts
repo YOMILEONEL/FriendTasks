@@ -25,7 +25,7 @@ const de = {
   "common.none": "Keine",
   "common.name": "Name",
 
-  "nav.appName": "FriendTasks",
+  "nav.appName": "PlanyourTasks",
   "nav.tagline": "Todos für dich und Freunde",
   "nav.dashboard": "Dashboard",
   "nav.today": "Heute",
@@ -284,7 +284,7 @@ const en: Dictionary = {
   "common.none": "None",
   "common.name": "Name",
 
-  "nav.appName": "FriendTasks",
+  "nav.appName": "PlanyourTasks",
   "nav.tagline": "Todos for you and your friends",
   "nav.dashboard": "Dashboard",
   "nav.today": "Today",

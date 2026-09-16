@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-// Same FT monogram as components/layout/logo.tsx and app/icon.tsx, sized
+// Same PT monogram as components/layout/logo.tsx and app/icon.tsx, sized
 // for the iOS home-screen icon (iOS applies its own corner mask).
 export default function AppleIcon() {
   return new ImageResponse(
@@ -45,7 +45,7 @@ export default function AppleIcon() {
             fontFamily: "sans-serif",
           }}
         >
-          F
+          P
         </div>
       </div>
     ),

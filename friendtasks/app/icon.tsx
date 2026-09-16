@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
-// Same FT monogram as components/layout/logo.tsx, rendered for the favicon.
+// Same PT monogram as components/layout/logo.tsx, rendered for the favicon.
 export default function Icon() {
   return new ImageResponse(
     (
@@ -45,7 +45,7 @@ export default function Icon() {
             fontFamily: "sans-serif",
           }}
         >
-          F
+          P
         </div>
       </div>
     ),

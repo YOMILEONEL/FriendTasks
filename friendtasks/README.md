@@ -1,4 +1,4 @@
-# FriendTasks
+# PlanyourTasks
 
 Todo-App für Freundeskreise, gebaut mit Next.js (App Router) und Supabase. Der Projektüberblick steht in der [README des Repos](../README.md).
 

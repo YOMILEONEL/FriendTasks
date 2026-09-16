@@ -1,4 +1,4 @@
-# Supabase-Setup für FriendTasks
+# Supabase-Setup für PlanyourTasks
 
 ## 1. Projekt anlegen
 

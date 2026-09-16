@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   return {
-    title: "FriendTasks",
+    title: "PlanyourTasks",
     description: locale === "en" ? "Todo app for friends" : "Todo-App für Freundeskreise",
   };
 }

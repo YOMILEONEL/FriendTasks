@@ -4,7 +4,7 @@ import { getLocale } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 
 export const metadata = {
-  title: "Datenschutz / Privacy · FriendTasks",
+  title: "Datenschutz / Privacy · PlanyourTasks",
 };
 
 const CONTENT: Record<
@@ -18,7 +18,7 @@ const CONTENT: Record<
   de: {
     title: "Datenschutzerklärung",
     intro:
-      "FriendTasks ist ein privates, nicht-kommerzielles Hobbyprojekt für die eigene Nutzung im Freundeskreis.",
+      "PlanyourTasks ist ein privates, nicht-kommerzielles Hobbyprojekt für die eigene Nutzung im Freundeskreis.",
     sections: [
       {
         heading: "Welche Daten werden gespeichert?",
@@ -42,13 +42,13 @@ const CONTENT: Record<
       },
       {
         heading: "Kontakt",
-        body: "Bei Fragen zum Datenschutz wende dich direkt an die Person, die dich zu FriendTasks eingeladen hat bzw. die diese Instanz betreibt.",
+        body: "Bei Fragen zum Datenschutz wende dich direkt an die Person, die dich zu PlanyourTasks eingeladen hat bzw. die diese Instanz betreibt.",
       },
     ],
   },
   en: {
     title: "Privacy Policy",
-    intro: "FriendTasks is a private, non-commercial hobby project for personal use among friends.",
+    intro: "PlanyourTasks is a private, non-commercial hobby project for personal use among friends.",
     sections: [
       {
         heading: "What data is stored?",
@@ -72,7 +72,7 @@ const CONTENT: Record<
       },
       {
         heading: "Contact",
-        body: "For privacy questions, please contact the person who invited you to FriendTasks or who operates this instance.",
+        body: "For privacy questions, please contact the person who invited you to PlanyourTasks or who operates this instance.",
       },
     ],
   },
@@ -90,7 +90,7 @@ export default async function PrivacyPage() {
           className="flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50"
         >
           <LogoMark />
-          FriendTasks
+          PlanyourTasks
         </Link>
 
         <div className="space-y-6 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">

@@ -2,7 +2,7 @@
 
 ## 1. Projektüberblick
 
-**Projektname:** (Platzhalter, z. B. „FriendTasks")
+**Projektname:** (Platzhalter, z. B. „PlanyourTasks")
 
 **Zweck:** Eine webbasierte Todo-Anwendung für die private Nutzung innerhalb eines Freundeskreises. Nutzer können persönliche Aufgaben verwalten, Aufgaben mit Freunden teilen und gemeinsame Listen (z. B. für Reisen, WG-Aufgaben, Events) organisieren.
 

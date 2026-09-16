@@ -4,7 +4,7 @@ const SIZE_CLASSES = {
   lg: "h-14 w-14 text-2xl",
 } as const;
 
-// FT monogram: a bold "F" in front, a lighter "T" behind and offset, so the
+// PT monogram: a bold "P" in front, a lighter "T" behind and offset, so the
 // two letters read as one combined mark rather than two stacked initials.
 export function LogoMark({
   size = "sm",
@@ -21,9 +21,9 @@ export function LogoMark({
         T
       </span>
       <span aria-hidden className="relative">
-        F
+        P
       </span>
-      <span className="sr-only">FriendTasks</span>
+      <span className="sr-only">PlanyourTasks</span>
     </span>
   );
 }

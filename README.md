@@ -1,4 +1,4 @@
-# FriendTasks
+# PlanyourTasks
 
 Todo-App für Freundeskreise: persönliche Aufgaben, geteilte Gruppen-Listen, Wochenkalender und Zuweisungen. Gebaut mit Next.js und Supabase.
 
