@@ -41,3 +41,4 @@ docs/           Requirements und Setup-Anleitung
 
 - [Requirements](docs/todo-app-requirements.md), die vollständige Anforderungsanalyse
 - [Supabase-Setup](docs/supabase-setup.md), Schritt-für-Schritt-Anleitung für Datenbank und Umgebungsvariablen
+- [Architekturdiagramm](docs/diagram.png), grober Überblick über Seiten, Server Actions und Datenzugriff
