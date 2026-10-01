@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { Tag } from "@/lib/types/todo";
 
 const COLORS = ["#71717a", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
@@ -14,9 +15,10 @@ export function TagManager({ tags }: { tags: Tag[] }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const t = useT();
+  const confirm = useConfirm();
 
-  function handleDelete(tagId: string, name: string) {
-    if (!confirm(format(t("tags.deleteConfirm"), { name }))) return;
+  async function handleDelete(tagId: string, name: string) {
+    if (!(await confirm({ message: format(t("tags.deleteConfirm"), { name }), danger: true }))) return;
     startTransition(() => {
       deleteTag(tagId);
     });

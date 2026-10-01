@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { leaveGroup, removeMember } from "@/lib/actions/groups";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { GroupMember } from "@/lib/types/group";
 
 export function MemberList({
@@ -19,16 +20,17 @@ export function MemberList({
 }) {
   const [isPending, startTransition] = useTransition();
   const t = useT();
+  const confirm = useConfirm();
 
-  function handleRemove(userId: string, name: string) {
-    if (!confirm(format(t("groups.removeConfirm"), { name }))) return;
+  async function handleRemove(userId: string, name: string) {
+    if (!(await confirm({ message: format(t("groups.removeConfirm"), { name }), danger: true }))) return;
     startTransition(() => {
       removeMember(groupId, userId);
     });
   }
 
-  function handleLeave() {
-    if (!confirm(t("groups.leaveConfirm"))) return;
+  async function handleLeave() {
+    if (!(await confirm({ message: t("groups.leaveConfirm"), danger: true }))) return;
     startTransition(() => {
       leaveGroup(groupId);
     });

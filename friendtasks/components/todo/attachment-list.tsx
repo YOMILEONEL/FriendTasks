@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 
 function formatSize(bytes: number | null): string {
   if (!bytes) return "";
@@ -23,6 +24,7 @@ export function AttachmentList({ todoId }: { todoId: string }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const t = useT();
+  const confirm = useConfirm();
 
   function refresh() {
     startTransition(async () => {
@@ -48,8 +50,8 @@ export function AttachmentList({ todoId }: { todoId: string }) {
     });
   }
 
-  function handleDelete(attachmentId: string, name: string) {
-    if (!confirm(format(t("attachments.deleteConfirm"), { name }))) return;
+  async function handleDelete(attachmentId: string, name: string) {
+    if (!(await confirm({ message: format(t("attachments.deleteConfirm"), { name }), danger: true }))) return;
     startTransition(async () => {
       await deleteAttachment(attachmentId);
       refresh();

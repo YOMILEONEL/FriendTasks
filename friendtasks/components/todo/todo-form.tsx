@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { formatTime } from "@/lib/utils/date";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import type { Priority, Recurrence } from "@/lib/types/database";
 import type { Todo } from "@/lib/types/todo";
@@ -77,6 +78,7 @@ export function TodoForm({
     new Set(todo?.recurrence_weekdays ?? [])
   );
   const t = useT();
+  const confirm = useConfirm();
 
   function toggleWeekday(value: number) {
     setRecurrenceWeekdays((prev) => {
@@ -103,7 +105,7 @@ export function TodoForm({
       if (dueDate && dueTime) {
         const overlapping = await checkTodoOverlap({ dueDate, dueTime, dueTimeEnd, excludeTodoId: todoId });
         if (overlapping.length > 0) {
-          const proceed = confirm(format(t("todoForm.overlapConfirm"), { names: overlapping.join(", ") }));
+          const proceed = await confirm(format(t("todoForm.overlapConfirm"), { names: overlapping.join(", ") }));
           if (!proceed) return;
         }
       }

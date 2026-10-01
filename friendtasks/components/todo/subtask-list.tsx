@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { Subtask } from "@/lib/types/todo";
 
 export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Subtask[] }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const t = useT();
+  const confirm = useConfirm();
 
   function handleToggle(subtaskId: string, done: boolean) {
     startTransition(() => {
@@ -20,8 +22,8 @@ export function SubtaskList({ todoId, subtasks }: { todoId: string; subtasks: Su
     });
   }
 
-  function handleDelete(subtaskId: string, title: string) {
-    if (!confirm(format(t("subtask.deleteConfirm"), { title }))) return;
+  async function handleDelete(subtaskId: string, title: string) {
+    if (!(await confirm({ message: format(t("subtask.deleteConfirm"), { title }), danger: true }))) return;
     startTransition(() => {
       deleteSubtask(subtaskId);
     });

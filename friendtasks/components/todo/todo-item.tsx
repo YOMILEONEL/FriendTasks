@@ -14,6 +14,7 @@ import { AssigneePicker } from "@/components/groups/assignee-picker";
 import { formatDueDate, formatTimeRange } from "@/lib/utils/date";
 import { format } from "@/lib/i18n/format";
 import { useLocale, useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { Tag, TodoWithRelations } from "@/lib/types/todo";
 import type { GroupMember } from "@/lib/types/group";
 
@@ -33,6 +34,7 @@ export function TodoItem({
   const [isPending, startTransition] = useTransition();
   const t = useT();
   const locale = useLocale();
+  const confirm = useConfirm();
 
   // A friend invited to a personal list can view it but not create, edit,
   // delete or check off its todos — only the list owner can write. Group
@@ -54,8 +56,8 @@ export function TodoItem({
     });
   }
 
-  function handleDelete() {
-    if (!confirm(format(t("todo.deleteConfirm"), { title: todo.title }))) return;
+  async function handleDelete() {
+    if (!(await confirm({ message: format(t("todo.deleteConfirm"), { title: todo.title }), danger: true }))) return;
     startTransition(() => {
       deleteTodo(todo.id);
     });

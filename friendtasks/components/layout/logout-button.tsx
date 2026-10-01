@@ -3,13 +3,15 @@
 import { useTransition } from "react";
 import { logout } from "@/lib/actions/auth";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 
 export function LogoutButton() {
   const [isPending, startTransition] = useTransition();
   const t = useT();
+  const confirm = useConfirm();
 
-  function handleClick() {
-    if (!confirm(t("topbar.logoutConfirm"))) return;
+  async function handleClick() {
+    if (!(await confirm({ message: t("topbar.logoutConfirm"), danger: true }))) return;
     startTransition(() => {
       logout();
     });

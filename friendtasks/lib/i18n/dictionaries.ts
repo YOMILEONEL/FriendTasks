@@ -24,6 +24,7 @@ const de = {
   "common.loading": "Lädt…",
   "common.none": "Keine",
   "common.name": "Name",
+  "common.confirmAction": "Bestätigen",
 
   "nav.appName": "PlanyourTasks",
   "nav.tagline": "Todos für dich und Freunde",
@@ -283,6 +284,7 @@ const en: Dictionary = {
   "common.loading": "Loading…",
   "common.none": "None",
   "common.name": "Name",
+  "common.confirmAction": "Confirm",
 
   "nav.appName": "PlanyourTasks",
   "nav.tagline": "Todos for you and your friends",

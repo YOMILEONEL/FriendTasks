@@ -5,6 +5,7 @@ import { deleteList } from "@/lib/actions/lists";
 import { Button } from "@/components/ui/button";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 
 export function DeleteListButton({
   listId,
@@ -19,9 +20,10 @@ export function DeleteListButton({
 }) {
   const [isPending, startTransition] = useTransition();
   const t = useT();
+  const confirm = useConfirm();
 
-  function handleDelete() {
-    if (!confirm(confirmMessage ?? format(t("lists.deleteConfirmDefault"), { name: listName }))) {
+  async function handleDelete() {
+    if (!(await confirm({ message: confirmMessage ?? format(t("lists.deleteConfirmDefault"), { name: listName }), danger: true }))) {
       return;
     }
     startTransition(() => {

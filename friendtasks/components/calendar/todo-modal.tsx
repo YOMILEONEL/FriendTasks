@@ -6,6 +6,7 @@ import { TodoForm } from "@/components/todo/todo-form";
 import { formatDayLabel } from "@/lib/utils/date";
 import { format } from "@/lib/i18n/format";
 import { useLocale, useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { TodoWithRelations } from "@/lib/types/todo";
 
 export function TodoModal({
@@ -23,10 +24,11 @@ export function TodoModal({
   const action = todo ? updateTodo.bind(null, todo.id) : createTodo;
   const t = useT();
   const locale = useLocale();
+  const confirm = useConfirm();
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!todo) return;
-    if (!confirm(format(t("todo.deleteConfirm"), { title: todo.title }))) return;
+    if (!(await confirm({ message: format(t("todo.deleteConfirm"), { title: todo.title }), danger: true }))) return;
     startTransition(() => {
       deleteTodo(todo.id);
     });

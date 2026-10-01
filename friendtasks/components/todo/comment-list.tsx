@@ -5,12 +5,14 @@ import { createComment, deleteComment, listComments, type CommentView } from "@/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 
 export function CommentList({ todoId }: { todoId: string }) {
   const [comments, setComments] = useState<CommentView[] | null>(null);
   const [value, setValue] = useState("");
   const [isPending, startTransition] = useTransition();
   const t = useT();
+  const confirm = useConfirm();
 
   function refresh() {
     startTransition(async () => {
@@ -35,8 +37,8 @@ export function CommentList({ todoId }: { todoId: string }) {
     });
   }
 
-  function handleDelete(commentId: string) {
-    if (!confirm(t("comments.deleteConfirm"))) return;
+  async function handleDelete(commentId: string) {
+    if (!(await confirm({ message: t("comments.deleteConfirm"), danger: true }))) return;
     startTransition(async () => {
       await deleteComment(commentId);
       refresh();

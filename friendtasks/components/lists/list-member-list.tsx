@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { leaveList, removeListMember } from "@/lib/actions/lists";
 import { format } from "@/lib/i18n/format";
 import { useT } from "@/components/i18n/locale-provider";
+import { useConfirm } from "@/components/shared/confirm-provider";
 import type { ListMember } from "@/lib/types/list";
 
 export function ListMemberList({
@@ -21,16 +22,17 @@ export function ListMemberList({
 }) {
   const [isPending, startTransition] = useTransition();
   const t = useT();
+  const confirm = useConfirm();
 
-  function handleRemove(userId: string, name: string) {
-    if (!confirm(format(t("lists.removeConfirm"), { name }))) return;
+  async function handleRemove(userId: string, name: string) {
+    if (!(await confirm({ message: format(t("lists.removeConfirm"), { name }), danger: true }))) return;
     startTransition(() => {
       removeListMember(listId, userId);
     });
   }
 
-  function handleLeave() {
-    if (!confirm(t("lists.leaveConfirm"))) return;
+  async function handleLeave() {
+    if (!(await confirm({ message: t("lists.leaveConfirm"), danger: true }))) return;
     startTransition(() => {
       leaveList(listId);
     });
